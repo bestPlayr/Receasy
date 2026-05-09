@@ -1,15 +1,31 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { api } from '../api';
 
 export default function Contact({ onToast }) {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', company: '', subject: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const handleChange = e => {
+    setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+    setError('');
+  };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    onToast('Message sent! We\'ll get back to you within 24 hours.');
-    setForm({ firstName: '', lastName: '', email: '', company: '', subject: '', message: '' });
+    setLoading(true);
+    setError('');
+
+    try {
+      await api.sendMessage(form);
+      onToast('Message sent! We\'ll get back to you within 24 hours.');
+      setForm({ firstName: '', lastName: '', email: '', company: '', subject: '', message: '' });
+    } catch (err) {
+      setError(err.message || 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,6 +68,16 @@ export default function Contact({ onToast }) {
           <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--gray-800)', marginBottom: 22 }}>
             Send Us a Message
           </h3>
+
+          {error && (
+            <div style={{
+              background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+              borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', marginBottom: 14
+            }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
@@ -81,9 +107,10 @@ export default function Contact({ onToast }) {
               <label>Message</label>
               <textarea name="message" value={form.message} onChange={handleChange} placeholder="Tell us about your recruitment challenges..." required />
             </div>
-            <button type="submit" className="form-submit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button type="submit" className="form-submit" disabled={loading}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Send size={16} />
-              Send Message
+              {loading ? 'Sending…' : 'Send Message'}
             </button>
           </form>
         </div>

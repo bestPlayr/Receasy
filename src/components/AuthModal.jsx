@@ -1,26 +1,46 @@
 import { useState } from 'react';
 import { X, Eye, EyeOff, Briefcase } from 'lucide-react';
+import { api } from '../api';
 
-export default function AuthModal({ mode, onClose, onSwitch, onToast }) {
+export default function AuthModal({ mode, onClose, onSwitch, onToast, onAuthSuccess }) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', company: '', remember: false });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const isSignIn = mode === 'signin';
 
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
     setForm(p => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
+    setError('');
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!isSignIn && form.password !== form.confirm) {
-      alert('Passwords do not match.');
+      setError('Passwords do not match.');
       return;
     }
-    onToast(isSignIn ? 'Welcome back! Signed in successfully.' : 'Account created! Welcome to RecEasy.');
-    onClose();
+
+    setLoading(true);
+    setError('');
+
+    try {
+      let data;
+      if (isSignIn) {
+        data = await api.signIn({ email: form.email, password: form.password, remember: form.remember });
+      } else {
+        data = await api.signUp({ name: form.name, email: form.email, password: form.password, company: form.company || undefined });
+      }
+      onAuthSuccess(data, isSignIn ? 'signin' : 'signup');
+      if (isSignIn) onClose();
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +55,15 @@ export default function AuthModal({ mode, onClose, onSwitch, onToast }) {
 
         <h2>{isSignIn ? 'Welcome back' : 'Create your account'}</h2>
         <p>{isSignIn ? 'Sign in to your RecEasy dashboard' : 'Start hiring smarter today — it\'s free'}</p>
+
+        {error && (
+          <div style={{
+            background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+            borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', marginBottom: 12
+          }}>
+            {error}
+          </div>
+        )}
 
         <form className="modal-form" onSubmit={handleSubmit}>
           {!isSignIn && (
@@ -102,8 +131,8 @@ export default function AuthModal({ mode, onClose, onSwitch, onToast }) {
             </div>
           )}
 
-          <button type="submit" className="modal-submit">
-            {isSignIn ? 'Sign In' : 'Create Account'}
+          <button type="submit" className="modal-submit" disabled={loading}>
+            {loading ? 'Please wait…' : isSignIn ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 

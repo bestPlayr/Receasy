@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Menu, X } from 'lucide-react';
+import { Briefcase, Menu, X, LogOut, User } from 'lucide-react';
 
-export default function Navbar({ onSignIn, onSignUp }) {
+export default function Navbar({ user, onSignIn, onSignUp, onLogout }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -35,8 +35,23 @@ export default function Navbar({ onSignIn, onSignUp }) {
         </ul>
 
         <div className="navbar-actions">
-          <button className="btn-signin" onClick={onSignIn}>Sign In</button>
-          <button className="btn-signup" onClick={onSignUp}>Get Started</button>
+          {user ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 600, color: 'var(--gray-700)' }}>
+                <User size={15} />
+                {user}
+              </div>
+              <button className="btn-signin" onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <LogOut size={14} />
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-signin" onClick={onSignIn}>Sign In</button>
+              <button className="btn-signup" onClick={onSignUp}>Get Started</button>
+            </>
+          )}
           <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -58,8 +73,17 @@ export default function Navbar({ onSignIn, onSignUp }) {
             </a>
           ))}
           <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-            <button className="btn-signin" style={{ flex: 1 }} onClick={() => { onSignIn(); setMenuOpen(false); }}>Sign In</button>
-            <button className="btn-signup" style={{ flex: 1 }} onClick={() => { onSignUp(); setMenuOpen(false); }}>Get Started</button>
+            {user ? (
+              <button className="btn-signin" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                onClick={() => { onLogout(); setMenuOpen(false); }}>
+                <LogOut size={14} /> Sign Out
+              </button>
+            ) : (
+              <>
+                <button className="btn-signin" style={{ flex: 1 }} onClick={() => { onSignIn(); setMenuOpen(false); }}>Sign In</button>
+                <button className="btn-signup" style={{ flex: 1 }} onClick={() => { onSignUp(); setMenuOpen(false); }}>Get Started</button>
+              </>
+            )}
           </div>
         </div>
       )}

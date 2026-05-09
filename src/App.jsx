@@ -10,6 +10,8 @@ import About from './components/About';
 import Contact from './components/Contact';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
+import Dashboard from './components/dashboard/Dashboard';
+import { api } from './api';
 
 function Toast({ message, onDone }) {
   useEffect(() => {
@@ -28,14 +30,49 @@ function Toast({ message, onDone }) {
 function App() {
   const [authMode, setAuthMode] = useState(null);
   const [toast, setToast] = useState(null);
+  // Persist login across page refreshes
+  const [user, setUser] = useState(() => localStorage.getItem('receasy_user') || null);
+  const [page, setPage] = useState(() => localStorage.getItem('receasy_user') ? 'dashboard' : 'landing');
 
   const showToast = (msg) => setToast(msg);
+
+  // Called by AuthModal on success — mode is 'signin' or 'signup'
+  const handleAuthSuccess = (data, mode) => {
+    if (mode === 'signup') {
+      // Stay on landing, nudge the user to sign in
+      showToast(`Account created, ${data.user_name}! Please sign in to access your dashboard.`);
+      setAuthMode('signin');
+    } else {
+      // Sign-in: go to dashboard
+      setUser(data.user_name);
+      setPage('dashboard');
+      setAuthMode(null);
+    }
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setUser(null);
+    setPage('landing');
+    showToast('You have been signed out.');
+  };
+
+  if (page === 'dashboard' && user) {
+    return (
+      <>
+        <Dashboard user={user} onLogout={handleLogout} />
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
       <Navbar
+        user={null}
         onSignIn={() => setAuthMode('signin')}
         onSignUp={() => setAuthMode('signup')}
+        onLogout={handleLogout}
       />
 
       <Hero onGetStarted={() => setAuthMode('signup')} />
@@ -52,6 +89,7 @@ function App() {
           onClose={() => setAuthMode(null)}
           onSwitch={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
           onToast={showToast}
+          onAuthSuccess={handleAuthSuccess}
         />
       )}
 
