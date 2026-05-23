@@ -10,6 +10,15 @@ const handleResponse = async (response) => {
   return data;
 };
 
+// Helper to attach authorization token for protected routes
+const getHeaders = () => {
+  const token = localStorage.getItem('receasy_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 export const api = {
   // Sign Up
   signUp: async (userData) => {
@@ -53,6 +62,73 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messageData),
+    });
+    return handleResponse(response);
+  },
+
+  // Get all jobs for the logged-in recruiter
+  getJobs: async () => {
+    const response = await fetch(`${API_BASE_URL}/jobs/`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Create a new job
+  createJob: async (jobData) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/create`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(jobData),
+    });
+    return handleResponse(response);
+  },
+  
+  // Get job details for candidates (Public - No Auth Required)
+  getPublicJob: async (jobId) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/public`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return handleResponse(response);
+  },
+
+  // Close an open job
+  closeJob: async (jobId) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/close`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Apply to a job (External facing, no Auth required)
+  applyToJob: async (jobId, candidateData) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(candidateData),
+    });
+    return handleResponse(response);
+  },
+
+  // Run AI Scoring on candidates based on filters
+  runAIScoring: async (jobId, filters) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/score`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(filters),
+    });
+    return handleResponse(response);
+  },
+
+  // Send interview invites to top N candidates
+  sendInvites: async (jobId, count) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/invite`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ count }),
     });
     return handleResponse(response);
   }

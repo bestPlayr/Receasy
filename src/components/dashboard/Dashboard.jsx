@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Briefcase, LogOut, ArrowLeft, MapPin, Mail, Phone,
   ChevronRight, OctagonX, Bot, SendHorizonal,
@@ -6,6 +6,8 @@ import {
   Plus, X, ExternalLink, GraduationCap, DollarSign,
   Calendar, Laptop, Building, Globe, Filter, Search,
 } from 'lucide-react';
+
+import { api } from '../../api';
 
 function GithubIcon() {
   return (
@@ -18,170 +20,7 @@ import './Dashboard.css';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const INITIAL_JOBS = [
-  {
-    id: 1,
-    positionName: 'Senior React Developer',
-    description: 'We are looking for a Senior React Developer to join our growing engineering team, building high-quality web applications used by thousands of hiring managers worldwide.',
-    requiredSkills: ['React', 'TypeScript', 'Node.js', 'AWS'],
-    minYearsExperience: 5,
-    salaryMin: 150000,
-    salaryMax: 300000,
-    workType: 'remote',
-    location: 'Lahore, Pakistan',
-    platforms: ['linkedin'],
-    status: 'open',
-    aiScoringDone: false,
-    invitesSent: false,
-    postedAt: 'May 17, 2026',
-    candidates: [
-      {
-        id: 1, name: 'Usman Tariq', initials: 'UT', color: '#4F46E5',
-        email: 'usman.tariq@gmail.com', phone: '+92 300 1234567',
-        educationLevel: "Bachelor's", university: 'FAST-NUCES Lahore',
-        yearsOfExperience: 6, salaryExpectation: 280000, salaryNegotiable: true,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/usmantariq',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 18, 2026',
-      },
-      {
-        id: 2, name: 'Fatima Malik', initials: 'FM', color: '#0891B2',
-        email: 'fatima.malik@gmail.com', phone: '+92 321 9876543',
-        educationLevel: "Master's", university: 'LUMS Lahore',
-        yearsOfExperience: 5, salaryExpectation: 250000, salaryNegotiable: false,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/fatimamalik',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 17, 2026',
-      },
-      {
-        id: 3, name: 'Hassan Raza', initials: 'HR', color: '#059669',
-        email: 'hassan.raza@outlook.com', phone: '+92 333 5556789',
-        educationLevel: "Bachelor's", university: 'NUST Islamabad',
-        yearsOfExperience: 5, salaryExpectation: 220000, salaryNegotiable: true,
-        comfortableWithWorkType: false, githubLink: 'https://github.com/hassanraza',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 16, 2026',
-      },
-      {
-        id: 4, name: 'Zainab Siddiqui', initials: 'ZS', color: '#DC2626',
-        email: 'zainab.siddiqui@gmail.com', phone: '+92 345 7778901',
-        educationLevel: "Bachelor's", university: 'IBA Karachi',
-        yearsOfExperience: 4, salaryExpectation: 180000, salaryNegotiable: true,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/zainabsiddiqui',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 15, 2026',
-      },
-      {
-        id: 5, name: 'Ali Hamza', initials: 'AH', color: '#D97706',
-        email: 'ali.hamza@gmail.com', phone: '+92 311 4445566',
-        educationLevel: "Bachelor's", university: 'UET Lahore',
-        yearsOfExperience: 7, salaryExpectation: 350000, salaryNegotiable: false,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/alihamza',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 14, 2026',
-      },
-    ],
-  },
-  {
-    id: 2,
-    positionName: 'Product Manager',
-    description: 'Looking for an experienced Product Manager to own our core recruitment product, working closely with engineering, design, and customers to ship features that delight users.',
-    requiredSkills: ['Product Strategy', 'Roadmapping', 'Data Analysis', 'Agile'],
-    minYearsExperience: 5,
-    salaryMin: 200000,
-    salaryMax: 400000,
-    workType: 'hybrid',
-    location: 'Lahore, Pakistan',
-    platforms: ['linkedin'],
-    status: 'open',
-    aiScoringDone: false,
-    invitesSent: false,
-    postedAt: 'May 15, 2026',
-    candidates: [
-      {
-        id: 6, name: 'Bilal Chaudhry', initials: 'BC', color: '#7C3AED',
-        email: 'bilal.chaudhry@gmail.com', phone: '+92 300 8889900',
-        educationLevel: "Master's", university: 'LUMS Lahore',
-        yearsOfExperience: 8, salaryExpectation: 390000, salaryNegotiable: true,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/bilalchaudhry',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 16, 2026',
-      },
-      {
-        id: 7, name: 'Sana Mirza', initials: 'SM', color: '#DB2777',
-        email: 'sana.mirza@outlook.com', phone: '+92 321 2223344',
-        educationLevel: "Bachelor's", university: 'NUST Islamabad',
-        yearsOfExperience: 6, salaryExpectation: 320000, salaryNegotiable: true,
-        comfortableWithWorkType: false, githubLink: 'https://github.com/sanamirza',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 15, 2026',
-      },
-      {
-        id: 8, name: 'Omar Sheikh', initials: 'OS', color: '#0284C7',
-        email: 'omar.sheikh@gmail.com', phone: '+92 333 6667788',
-        educationLevel: "Master's", university: 'IBA Karachi',
-        yearsOfExperience: 5, salaryExpectation: 260000, salaryNegotiable: false,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/omarsheikh',
-        resumeLink: '#', aiScore: null, interviewStatus: null,
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 14, 2026',
-      },
-    ],
-  },
-  {
-    id: 3,
-    positionName: 'Data Scientist',
-    description: "Join our AI team to build the ML models powering RecEasy's candidate scoring and job-matching algorithms.",
-    requiredSkills: ['Python', 'PyTorch', 'NLP', 'SQL', 'Machine Learning'],
-    minYearsExperience: 3,
-    salaryMin: 180000,
-    salaryMax: 320000,
-    workType: 'on-site',
-    location: 'Karachi, Pakistan',
-    platforms: ['linkedin'],
-    status: 'closed',
-    aiScoringDone: true,
-    invitesSent: true,
-    postedAt: 'May 13, 2026',
-    candidates: [
-      {
-        id: 11, name: 'Hira Baig', initials: 'HB', color: '#6D28D9',
-        email: 'hira.baig@gmail.com', phone: '+92 345 1112233',
-        educationLevel: 'PhD', university: 'NUST Islamabad',
-        yearsOfExperience: 4, salaryExpectation: 310000, salaryNegotiable: true,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/hirabaig',
-        resumeLink: '#', aiScore: 97, interviewStatus: 'invited',
-        interviewGiven: true, interviewScore: 91, appliedAt: 'May 14, 2026',
-      },
-      {
-        id: 12, name: 'Kamran Iqbal', initials: 'KI', color: '#BE185D',
-        email: 'kamran.iqbal@outlook.com', phone: '+92 311 9990011',
-        educationLevel: "Master's", university: 'FAST-NUCES Karachi',
-        yearsOfExperience: 5, salaryExpectation: 290000, salaryNegotiable: false,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/kamraniqbal',
-        resumeLink: '#', aiScore: 89, interviewStatus: 'invited',
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 13, 2026',
-      },
-      {
-        id: 13, name: 'Ayesha Noor', initials: 'AN', color: '#0EA5E9',
-        email: 'ayesha.noor@gmail.com', phone: '+92 300 3334455',
-        educationLevel: "Master's", university: 'UET Lahore',
-        yearsOfExperience: 3, salaryExpectation: 200000, salaryNegotiable: true,
-        comfortableWithWorkType: false, githubLink: 'https://github.com/ayeshanoor',
-        resumeLink: '#', aiScore: 74, interviewStatus: 'filtered_out',
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 12, 2026',
-      },
-      {
-        id: 14, name: 'Saad Rehman', initials: 'SR', color: '#64748B',
-        email: 'saad.rehman@gmail.com', phone: '+92 321 7778899',
-        educationLevel: "Bachelor's", university: 'GIK Institute Swabi',
-        yearsOfExperience: 2, salaryExpectation: 130000, salaryNegotiable: true,
-        comfortableWithWorkType: true, githubLink: 'https://github.com/saadrehman',
-        resumeLink: '#', aiScore: 61, interviewStatus: 'filtered_out',
-        interviewGiven: false, interviewScore: null, appliedAt: 'May 11, 2026',
-      },
-    ],
-  },
-];
+const INITIAL_JOBS = []; // Data now comes from API
 
 // ─── Constants / helpers ──────────────────────────────────────────────────────
 
@@ -233,6 +72,8 @@ function CreateJobModal({ onClose, onCreate }) {
     description: '',
     requiredSkills: [],
     skillInput: '',
+    customQuestions: [],
+    questionInput: '',
     minYearsExperience: '',
     salaryMin: '',
     salaryMax: '',
@@ -254,6 +95,17 @@ function CreateJobModal({ onClose, onCreate }) {
 
   const removeSkill = (sk) =>
     set('requiredSkills', form.requiredSkills.filter(s => s !== sk));
+
+  const addQuestion = () => {
+    const q = form.questionInput.trim();
+    if (q && !form.customQuestions.includes(q)) {
+      set('customQuestions', [...form.customQuestions, q]);
+    }
+    set('questionInput', '');
+  };
+
+  const removeQuestion = (q) =>
+    set('customQuestions', form.customQuestions.filter(x => x !== q));
 
   const validate = () => {
     const e = {};
@@ -280,6 +132,7 @@ function CreateJobModal({ onClose, onCreate }) {
       positionName: form.positionName.trim(),
       description: form.description.trim(),
       requiredSkills: form.requiredSkills,
+      customQuestions: form.customQuestions,
       minYearsExperience: Number(form.minYearsExperience),
       salaryMin: Number(form.salaryMin),
       salaryMax: Number(form.salaryMax),
@@ -364,6 +217,38 @@ function CreateJobModal({ onClose, onCreate }) {
                 </div>
               )}
               {errors.requiredSkills && <span className="db-form-error">{errors.requiredSkills}</span>}
+            </div>
+
+            {/* Custom Questions */}
+            <div className="db-form-group">
+              <label className="db-form-label">
+                Custom Interview Questions (Optional)
+              </label>
+              <div className="db-skills-input-row">
+                <input
+                  className="db-form-input"
+                  style={{ flex: 1 }}
+                  placeholder="Type a question and press Add or Enter"
+                  value={form.questionInput}
+                  onChange={e => set('questionInput', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addQuestion(); } }}
+                />
+                <button type="button" className="db-btn-primary" style={{ padding: '9px 16px' }} onClick={addQuestion}>
+                  Add
+                </button>
+              </div>
+              {form.customQuestions.length > 0 && (
+                <div className="db-skills-tags">
+                  {form.customQuestions.map(q => (
+                    <span key={q} className="db-skill-tag-removable" style={{ background: '#f1f5f9', color: '#334155' }}>
+                      {q}
+                      <button type="button" onClick={() => removeQuestion(q)}>
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Experience + Work Type */}
@@ -639,13 +524,10 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
   // For the invite count max, only count candidates who were actually AI-scored
   const scoredCandidates = job.candidates.filter(c => c.aiScore !== null);
 
-  const handleRunAI = () => {
+  const handleRunAI = async () => {
     setAiRunning(true);
-    setTimeout(() => {
-      setAiRunning(false);
-      // Pass current filters so only matching candidates get scored
-      onRunAIScoring(job.id, filters);
-    }, 2000);
+    await onRunAIScoring(job.id, filters);
+    setAiRunning(false);
   };
 
   return (
@@ -694,7 +576,14 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
             </div>
             <div style={{ marginTop: 10, fontSize: '0.77rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
               Posted on:
-              {job.platforms.includes('linkedin') && (
+              {job.linkedin_url ? (
+                <a href={job.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: '#0A66C2', textDecoration: 'none' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A66C2">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                  </svg>
+                  LinkedIn
+                </a>
+              ) : (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: '#0A66C2' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A66C2">
                     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
@@ -1090,7 +979,7 @@ function CandidateProfileView({ candidate: c, job }) {
               >
                 <div className="db-contact-icon"><GithubIcon /></div>
                 <span style={{ fontSize: '0.82rem', color: '#3b82f6' }}>
-                  {c.githubLink.replace('https://github.com/', '@')}
+                  {c.githubLink ? c.githubLink.replace('https://github.com/', '@') : 'Not Provided'}
                 </span>
                 <ExternalLink size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
               </a>
@@ -1154,7 +1043,6 @@ export default function Dashboard({ user, onLogout }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [showCreateModal, setShowCreateModal]   = useState(false);
   const [toast, setToast]                       = useState(null);
-  const nextId = useRef(200);
 
   const initials = user
     ? user.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -1165,74 +1053,97 @@ export default function Dashboard({ user, onLogout }) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  const fetchJobs = async () => {
+    try {
+      const data = await api.getJobs();
+      // Map backend snake_case to frontend camelCase for rendering
+      const mappedJobs = data.map(job => ({
+        ...job,
+        positionName: job.position_name || job.positionName,
+        requiredSkills: job.required_skills || job.requiredSkills || [],
+        customQuestions: job.custom_questions || job.customQuestions || [],
+        minYearsExperience: job.min_years_experience || job.minYearsExperience,
+        salaryMin: job.salary_min || job.salaryMin,
+        salaryMax: job.salary_max || job.salaryMax,
+        workType: job.work_type || job.workType,
+        aiScoringDone: job.ai_scoring_done ?? job.aiScoringDone,
+        invitesSent: job.invites_sent ?? job.invitesSent,
+        postedAt: new Date(job.posted_at || job.postedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        candidates: (job.candidates || []).map(c => ({
+          ...c,
+          name: c.full_name,
+          initials: c.full_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
+          color: '#4F46E5', // Mock color to maintain UI consistency
+          educationLevel: c.education_level,
+          yearsOfExperience: c.years_of_experience,
+          salaryExpectation: c.salary_expectation,
+          salaryNegotiable: c.salary_negotiable,
+          comfortableWithWorkType: c.comfortable_with_work_type,
+          githubLink: c.github_link,
+          resumeLink: c.resume_link,
+          aiScore: c.ai_score,
+          interviewStatus: c.interview_status,
+          interviewGiven: c.interview_given,
+          interviewScore: c.interview_score,
+          appliedAt: new Date(c.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        }))
+      }));
+      setJobs(mappedJobs);
+    } catch (err) {
+      showToast('Error loading jobs from server');
+    }
+  };
+
+  // Fetch jobs on mount
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
   // Always read latest job/candidate from state
   const selectedJob       = jobs.find(j => j.id === selectedJobId) || null;
   const selectedCandidate = selectedJob?.candidates.find(c => c.id === selectedCandidateId) || null;
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const handleCreateJob = (formData) => {
-    const newJob = {
-      id: nextId.current++,
-      ...formData,
-      status: 'open',
-      aiScoringDone: false,
-      invitesSent: false,
-      postedAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      candidates: [],
-    };
-    setJobs(prev => [newJob, ...prev]);
-    setShowCreateModal(false);
-    showToast('Job successfully posted on LinkedIn!');
+  const handleCreateJob = async (formData) => {
+    try {
+      await api.createJob(formData);
+      await fetchJobs();
+      setShowCreateModal(false);
+      showToast('Job successfully created!');
+    } catch (err) {
+      showToast(err.message || 'Error creating job');
+    }
   };
 
-  const handleCloseJob = (jobId) => {
-    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'closed' } : j));
+  const handleCloseJob = async (jobId) => {
+    try {
+      await api.closeJob(jobId);
+      await fetchJobs();
+      showToast('Job closed successfully.');
+    } catch (err) {
+      showToast(err.message || 'Error closing job');
+    }
   };
 
-  const handleRunAIScoring = (jobId, filters) => {
-    setJobs(prev => prev.map(j => {
-      if (j.id !== jobId) return j;
-      // Only candidates that pass the active filters get scored
-      const eligible = applyFilters(j.candidates, filters, j);
-      const eligibleIds = new Set(eligible.map(c => c.id));
-      // Assign scores in a consistent order (by id) among eligible candidates
-      const sortedEligible = [...eligible].sort((a, b) => a.id - b.id);
-      const scoreMap = {};
-      sortedEligible.forEach((c, i) => {
-        scoreMap[c.id] = MOCK_AI_SCORES[i % MOCK_AI_SCORES.length];
-      });
-      return {
-        ...j,
-        aiScoringDone: true,
-        candidates: j.candidates.map(c =>
-          eligibleIds.has(c.id)
-            ? { ...c, aiScore: scoreMap[c.id] }
-            : { ...c, aiScore: null }           // non-eligible stay unscored
-        ),
-      };
-    }));
-    showToast('AI Scoring complete! Filtered candidates ranked by score.');
+  const handleRunAIScoring = async (jobId, filters) => {
+    try {
+      await api.runAIScoring(jobId, filters);
+      await fetchJobs();
+      showToast('AI Scoring complete! Filtered candidates ranked by score.');
+    } catch (err) {
+      showToast(err.message || 'Error running AI scoring');
+    }
   };
 
-  const handleSendInvites = (jobId, count) => {
-    setJobs(prev => prev.map(j => {
-      if (j.id !== jobId) return j;
-      // Only scored candidates are eligible for invites
-      const scored = j.candidates.filter(c => c.aiScore !== null)
-        .sort((a, b) => b.aiScore - a.aiScore);
-      const invitedIds = new Set(scored.slice(0, count).map(c => c.id));
-      const scoredIds  = new Set(scored.map(c => c.id));
-      return {
-        ...j,
-        invitesSent: true,
-        candidates: j.candidates.map(c => {
-          if (!scoredIds.has(c.id)) return { ...c, interviewStatus: 'filtered_out' };
-          return { ...c, interviewStatus: invitedIds.has(c.id) ? 'invited' : 'filtered_out' };
-        }),
-      };
-    }));
-    showToast(`Interview invites sent to top ${count} candidate${count !== 1 ? 's' : ''}!`);
+  const handleSendInvites = async (jobId, count) => {
+    try {
+      const res = await api.sendInvites(jobId, count);
+      await fetchJobs();
+      showToast(`Interview invites sent to ${res.invited_count} candidate(s)!`);
+    } catch (err) {
+      showToast(err.message || 'Error sending invites');
+    }
   };
 
   // ── Topbar ────────────────────────────────────────────────────────────────
