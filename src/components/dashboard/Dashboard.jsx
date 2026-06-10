@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, Clock3, FileText, LayoutDashboard,
   Plus, X, ExternalLink, GraduationCap, DollarSign,
   Calendar, Laptop, Building, Globe, Filter, Search,
+  Settings, Link, AlertTriangle, Eye, EyeOff, Trash2,
 } from 'lucide-react';
 
 import { api } from '../../api';
@@ -66,7 +67,7 @@ function ScoreCircle({ score, size = 44 }) {
 
 // ─── Create Job Modal ─────────────────────────────────────────────────────────
 
-function CreateJobModal({ onClose, onCreate }) {
+function CreateJobModal({ onClose, onCreate, onGoToSettings, linkedinConfigured }) {
   const [form, setForm] = useState({
     positionName: '',
     description: '',
@@ -121,6 +122,8 @@ function CreateJobModal({ onClose, onCreate }) {
     if (Number(form.salaryMin) > Number(form.salaryMax))
       e.salaryMax = 'Max must be ≥ min';
     if (!form.location.trim())       e.location = 'Required';
+    if (form.platforms.includes('linkedin') && !linkedinConfigured)
+      e.platforms = 'LinkedIn token not configured. Please set it up in Settings first.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -341,9 +344,28 @@ function CreateJobModal({ onClose, onCreate }) {
                       <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                     </svg>
                     LinkedIn
+                    {form.platforms.includes('linkedin') && (
+                      linkedinConfigured
+                        ? <span style={{ marginLeft: 6, color: '#16a34a', fontSize: '0.72rem', fontWeight: 600 }}>✓ Connected</span>
+                        : <span style={{ marginLeft: 6, color: '#dc2626', fontSize: '0.72rem', fontWeight: 600 }}>⚠ Not configured</span>
+                    )}
                   </span>
                 </label>
               </div>
+              {form.platforms.includes('linkedin') && !linkedinConfigured && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '8px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: '0.78rem', color: '#b91c1c' }}>
+                  <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                  LinkedIn token not set.{' '}
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); onGoToSettings(); }}
+                    style={{ color: '#2563eb', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit' }}
+                  >
+                    Configure it in Settings
+                  </button>
+                </div>
+              )}
+              {errors.platforms && <span className="db-form-error">{errors.platforms}</span>}
               <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 6 }}>
                 More platforms coming soon.
               </div>
@@ -358,6 +380,118 @@ function CreateJobModal({ onClose, onCreate }) {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Settings View ────────────────────────────────────────────────────────────
+
+function SettingsView({ linkedinConfigured, onSave, onRemove }) {
+  const [token, setToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [localConfigured, setLocalConfigured] = useState(linkedinConfigured);
+
+  const handleSave = async () => {
+    if (!token.trim()) return;
+    setSaving(true);
+    try {
+      await onSave(token.trim());
+      setLocalConfigured(true);
+      setToken('');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await onRemove();
+      setLocalConfigured(false);
+      setToken('');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>Settings</div>
+        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Manage your integrations and account preferences.</div>
+      </div>
+
+      {/* LinkedIn Integration Card */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '24px 28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#0A66C2">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+          </svg>
+          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>LinkedIn Integration</span>
+          {localConfigured
+            ? <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 20, padding: '2px 10px' }}>
+                <CheckCircle2 size={12} /> Connected
+              </span>
+            : <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 20, padding: '2px 10px' }}>
+                <AlertTriangle size={12} /> Not configured
+              </span>
+          }
+        </div>
+        <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '8px 0 20px' }}>
+          Paste your LinkedIn OAuth access token below to enable automatic job posting to LinkedIn when you create a new job.
+        </p>
+
+        {localConfigured && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8 }}>
+            <CheckCircle2 size={15} style={{ color: '#16a34a', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.82rem', color: '#15803d', flex: 1 }}>
+              A LinkedIn token is currently saved. You can replace it or remove it below.
+            </span>
+            <button
+              onClick={handleRemove}
+              disabled={removing}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: '#dc2626', background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500 }}
+            >
+              <Trash2 size={12} />
+              {removing ? 'Removing...' : 'Remove'}
+            </button>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              type={showToken ? 'text' : 'password'}
+              placeholder={localConfigured ? 'Paste new token to replace…' : 'Paste your LinkedIn access token…'}
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              style={{ width: '100%', padding: '9px 38px 9px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', background: '#f8fafc' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken(v => !v)}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
+            >
+              {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving || !token.trim()}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: token.trim() ? '#4F46E5' : '#e2e8f0', color: token.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, cursor: token.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}
+          >
+            {saving ? 'Saving…' : localConfigured ? 'Update Token' : 'Save Token'}
+          </button>
+        </div>
+
+        <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.78rem', color: '#64748b', lineHeight: 1.6 }}>
+          <strong style={{ color: '#475569' }}>How to get your token:</strong> Go to the{' '}
+          <a href="https://www.linkedin.com/developers/" target="_blank" rel="noreferrer" style={{ color: '#4F46E5' }}>LinkedIn Developer Portal</a>,
+          create an app, and generate an OAuth 2.0 access token with <code style={{ background: '#e2e8f0', padding: '1px 5px', borderRadius: 4 }}>w_member_social</code> scope.
         </div>
       </div>
     </div>
@@ -1043,6 +1177,7 @@ export default function Dashboard({ user, onLogout }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [showCreateModal, setShowCreateModal]   = useState(false);
   const [toast, setToast]                       = useState(null);
+  const [linkedinConfigured, setLinkedinConfigured] = useState(false);
 
   const initials = user
     ? user.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -1094,9 +1229,19 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
-  // Fetch jobs on mount
+  const fetchLinkedInStatus = async () => {
+    try {
+      const res = await api.getLinkedInStatus();
+      setLinkedinConfigured(res.configured);
+    } catch {
+      // silently ignore if auth not yet available
+    }
+  };
+
+  // Fetch jobs and LinkedIn status on mount
   useEffect(() => {
     fetchJobs();
+    fetchLinkedInStatus();
   }, []);
 
   // Always read latest job/candidate from state
@@ -1146,11 +1291,34 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
+  const handleSaveLinkedInToken = async (token) => {
+    try {
+      await api.saveLinkedInToken(token);
+      setLinkedinConfigured(true);
+      showToast('LinkedIn token saved successfully!');
+    } catch (err) {
+      showToast(err.message || 'Error saving LinkedIn token');
+      throw err;
+    }
+  };
+
+  const handleRemoveLinkedInToken = async () => {
+    try {
+      await api.removeLinkedInToken();
+      setLinkedinConfigured(false);
+      showToast('LinkedIn token removed.');
+    } catch (err) {
+      showToast(err.message || 'Error removing LinkedIn token');
+      throw err;
+    }
+  };
+
   // ── Topbar ────────────────────────────────────────────────────────────────
 
   const topbarTitle = () => {
     if (view === 'candidate' && selectedCandidate) return selectedCandidate.name;
     if (view === 'job-detail' && selectedJob) return selectedJob.positionName;
+    if (view === 'settings') return 'Settings';
     return 'Dashboard';
   };
 
@@ -1177,10 +1345,20 @@ export default function Dashboard({ user, onLogout }) {
         <div className="db-sidebar-nav">
           <div className="db-nav-section">Menu</div>
           <button
-            className="db-nav-item active"
+            className={`db-nav-item${view === 'home' || view === 'job-detail' || view === 'candidate' ? ' active' : ''}`}
             onClick={() => { setView('home'); setSelectedJobId(null); setSelectedCandidateId(null); }}
           >
             <LayoutDashboard size={16} /> Dashboard
+          </button>
+          <button
+            className={`db-nav-item${view === 'settings' ? ' active' : ''}`}
+            onClick={() => setView('settings')}
+            style={{ position: 'relative' }}
+          >
+            <Settings size={16} /> Settings
+            {!linkedinConfigured && (
+              <span style={{ marginLeft: 'auto', width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} title="LinkedIn not configured" />
+            )}
           </button>
         </div>
 
@@ -1254,6 +1432,14 @@ export default function Dashboard({ user, onLogout }) {
               job={selectedJob}
             />
           )}
+
+          {view === 'settings' && (
+            <SettingsView
+              linkedinConfigured={linkedinConfigured}
+              onSave={handleSaveLinkedInToken}
+              onRemove={handleRemoveLinkedInToken}
+            />
+          )}
         </div>
       </div>
 
@@ -1270,6 +1456,8 @@ export default function Dashboard({ user, onLogout }) {
         <CreateJobModal
           onClose={() => setShowCreateModal(false)}
           onCreate={handleCreateJob}
+          linkedinConfigured={linkedinConfigured}
+          onGoToSettings={() => setView('settings')}
         />
       )}
     </div>

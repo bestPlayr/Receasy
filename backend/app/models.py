@@ -11,6 +11,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     company_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
+    linkedin_token = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     jobs = relationship("Job", back_populates="owner")
 

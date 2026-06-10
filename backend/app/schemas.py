@@ -122,3 +122,10 @@ class FilterPayload(BaseModel):
 
 class InvitePayload(BaseModel):
     count: int
+
+# --- Settings Schemas ---
+class LinkedInTokenUpdate(BaseModel):
+    token: str
+
+class LinkedInTokenStatus(BaseModel):
+    configured: bool

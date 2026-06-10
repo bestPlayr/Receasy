@@ -47,19 +47,21 @@ The Hiring Team"""
         print(f"Failed to send email to {candidate_email}: {str(e)}")
 
 
-def post_to_linkedin(text: str) -> str:
-    token = getattr(settings, "LINKEDIN_TOKEN", None)
-    if not token: 
+def post_to_linkedin(text: str, token: str) -> str:
+    if not token:
+        print("[LinkedIn] No token provided.")
         return None
     headers = {
-        "Authorization": f"Bearer {token}", 
-        "Content-Type": "application/json", 
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0"
     }
     try:
         user_res = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
+        print(f"[LinkedIn] /userinfo status: {user_res.status_code} — {user_res.text}")
         user_res.raise_for_status()
         user_id = user_res.json()["sub"]
+        print(f"[LinkedIn] Posting as user: {user_id}")
 
         payload = {
             "author": f"urn:li:person:{user_id}",
@@ -68,10 +70,14 @@ def post_to_linkedin(text: str) -> str:
             "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
         }
         post_res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
+        print(f"[LinkedIn] /ugcPosts status: {post_res.status_code} — {post_res.text}")
         post_res.raise_for_status()
         urn = post_res.json().get("id")
-        return f"https://www.linkedin.com/feed/update/{urn}" if urn else None
-    except Exception:
+        url = f"https://www.linkedin.com/feed/update/{urn}" if urn else None
+        print(f"[LinkedIn] Post URL: {url}")
+        return url
+    except Exception as e:
+        print(f"[LinkedIn] ERROR: {e}")
         return None
 
 
@@ -82,29 +88,36 @@ def get_jobs(db: Session = Depends(get_db), user_id: int = Depends(get_current_u
 
 @router.post("/create", response_model=schemas.JobOut)
 def create_job(job_data: schemas.JobCreate, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
-    
+
+    if "linkedin" in job_data.platforms:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user or not user.linkedin_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="LinkedIn token not configured. Please add your LinkedIn token in Settings before posting to LinkedIn."
+            )
+
     new_job = models.Job(
-        user_id=user_id, 
-        position_name=job_data.positionName, 
+        user_id=user_id,
+        position_name=job_data.positionName,
         description=job_data.description,
-        required_skills=job_data.requiredSkills, 
-        custom_questions=job_data.customQuestions, 
+        required_skills=job_data.requiredSkills,
+        custom_questions=job_data.customQuestions,
         min_years_experience=job_data.minYearsExperience,
-        salary_min=job_data.salaryMin, 
-        salary_max=job_data.salaryMax, 
+        salary_min=job_data.salaryMin,
+        salary_max=job_data.salaryMax,
         work_type=job_data.workType,
-        location=job_data.location, 
+        location=job_data.location,
         linkedin_url=None
     )
     db.add(new_job)
     db.flush()
 
     if "linkedin" in job_data.platforms:
-        apply_link = f"http://localhost:5173/apply/{new_job.id}" 
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        apply_link = f"http://localhost:5173/apply/{new_job.id}"
         text = f"We are hiring a {job_data.positionName} in {job_data.location}!\n\n{job_data.description}\n\nApply now directly at: {apply_link}"
-
-        # new_job.linkedin_url = post_to_linkedin(text) 
-        print(apply_link)
+        new_job.linkedin_url = post_to_linkedin(text, user.linkedin_token)
 
     db.commit()
     db.refresh(new_job)

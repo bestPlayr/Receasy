@@ -131,5 +131,33 @@ export const api = {
       body: JSON.stringify({ count }),
     });
     return handleResponse(response);
-  }
+  },
+
+  // Get LinkedIn token configuration status
+  getLinkedInStatus: async () => {
+    const response = await fetch(`${API_BASE_URL}/settings/linkedin`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Save LinkedIn token
+  saveLinkedInToken: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/settings/linkedin`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ token }),
+    });
+    return handleResponse(response);
+  },
+
+  // Remove LinkedIn token
+  removeLinkedInToken: async () => {
+    const response = await fetch(`${API_BASE_URL}/settings/linkedin`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
