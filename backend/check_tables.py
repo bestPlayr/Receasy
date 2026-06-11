@@ -19,3 +19,4 @@ if "candidates" in tables:
             print(f"  {col[0]:30s} {col[1]}")
 else:
     print("\n'candidates' table does NOT exist.")
+
