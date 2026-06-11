@@ -3,6 +3,7 @@ import uuid
 import shutil
 import smtplib
 import secrets
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -13,12 +14,18 @@ from typing import List
 from app import models, schemas
 from app.dependencies import get_db, get_current_user_id
 from app.config import settings
+from app.score_resume import ResumeRanker
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
 EDU_ORDER = ["High School", "Bachelor's", "Master's", "PhD"]
+
+
+def _resume_link_to_path(resume_link: str) -> str:
+    if resume_link.startswith("http"):
+        return urlparse(resume_link).path.lstrip("/")
+    return resume_link
 EXP_MINS = [0, 1, 3, 5, 7, 10]
-MOCK_AI_SCORES = [96, 91, 88, 78, 72, 94, 87, 76, 93, 85, 97, 89, 74, 61]
 INTERVIEW_PASS_THRESHOLD = 70
 
 
@@ -43,6 +50,41 @@ def send_email(to_email: str, subject: str, body: str):
         print(f"Failed to send email to {to_email}: {str(e)}")
 
 
+def build_rejection_email(candidate_name: str, position_name: str) -> str:
+    first = candidate_name.split()[0] if candidate_name else candidate_name
+    return (
+        f"Hi {first},\n\n"
+        f"Thank you so much for taking the time to apply for the {position_name} position and for your interest in joining our team.\n\n"
+        f"We were genuinely impressed by your background and the skills you bring to the table. After careful consideration, however, we were unable to move forward with your application at this stage — the process was highly competitive, and our decision ultimately came down to a very specific set of requirements for this particular role.\n\n"
+        f"This does not reflect a lack of talent or capability on your part. We hold your profile in high regard and would truly love to keep you in mind for future opportunities that align with your experience.\n\n"
+        f"We encourage you to keep an eye on our open roles and reapply when a suitable position becomes available. We genuinely hope our paths will cross again.\n\n"
+        f"We wish you every success in your job search and your career ahead.\n\n"
+        f"Warm regards,\n"
+        f"The Hiring Team"
+    )
+
+
+def build_invite_email(candidate_name: str, position_name: str, interview_link: str, deadline_days: int, expires_date: str) -> str:
+    first = candidate_name.split()[0] if candidate_name else candidate_name
+    return (
+        f"Hi {first},\n\n"
+        f"Congratulations! 🎉\n\n"
+        f"We are thrilled to inform you that you have been shortlisted for the {position_name} role, and we would like to invite you to complete an AI-powered interview as the next step in our hiring process.\n\n"
+        f"Your AI Interview link is ready:\n"
+        f"{interview_link}\n\n"
+        f"Please complete the interview within {deadline_days} day{'s' if deadline_days != 1 else ''}. "
+        f"The link will expire on {expires_date}.\n\n"
+        f"A few things to keep in mind:\n"
+        f"  • Find a quiet place with a stable internet connection.\n"
+        f"  • Use Google Chrome or Microsoft Edge for the best experience.\n"
+        f"  • Speak clearly and take your time to answer each question thoughtfully.\n\n"
+        f"Should you have any questions or need assistance at any point, please don't hesitate to reach out to us — we're happy to help and want to make sure you have the best experience possible.\n\n"
+        f"We look forward to hearing from you and wish you the very best of luck!\n\n"
+        f"Best regards,\n"
+        f"The Hiring Team"
+    )
+
+
 def check_auto_close(job, db: Session, bg_tasks: BackgroundTasks):
     if job.status == "open" and job.application_deadline:
         if datetime.now(timezone.utc) > job.application_deadline:
@@ -54,10 +96,10 @@ def check_auto_close(job, db: Session, bg_tasks: BackgroundTasks):
                 bg_tasks.add_task(send_email, recruiter.email, f"Job Closed Automatically: {job.position_name}", body)
 
 
-def post_to_linkedin(text: str, token: str) -> str:
+def post_to_linkedin(text: str, token: str) -> tuple:
+    """Returns (post_url, error_message). post_url is None on failure."""
     if not token:
-        print("[LinkedIn] No token provided.")
-        return None
+        return None, "LinkedIn token not configured."
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -66,7 +108,9 @@ def post_to_linkedin(text: str, token: str) -> str:
     try:
         user_res = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
         print(f"[LinkedIn] /userinfo status: {user_res.status_code} — {user_res.text}")
-        user_res.raise_for_status()
+        if not user_res.ok:
+            detail = user_res.json().get("message") or user_res.json().get("error_description") or user_res.text
+            return None, f"LinkedIn auth failed ({user_res.status_code}): {detail}"
         user_id = user_res.json()["sub"]
         print(f"[LinkedIn] Posting as user: {user_id}")
 
@@ -78,14 +122,16 @@ def post_to_linkedin(text: str, token: str) -> str:
         }
         post_res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
         print(f"[LinkedIn] /ugcPosts status: {post_res.status_code} — {post_res.text}")
-        post_res.raise_for_status()
+        if not post_res.ok:
+            detail = post_res.json().get("message") or post_res.json().get("error_description") or post_res.text
+            return None, f"LinkedIn post failed ({post_res.status_code}): {detail}"
         urn = post_res.json().get("id")
         url = f"https://www.linkedin.com/feed/update/{urn}" if urn else None
         print(f"[LinkedIn] Post URL: {url}")
-        return url
+        return url, None
     except Exception as e:
         print(f"[LinkedIn] ERROR: {e}")
-        return None
+        return None, str(e)
 
 
 @router.get("/", response_model=List[schemas.JobOut])
@@ -108,7 +154,7 @@ def create_job(job_data: schemas.JobCreate, db: Session = Depends(get_db), user_
             )
 
     unique_public_id = str(uuid.uuid4())
-    apply_link = f"http://localhost:5173/apply/{unique_public_id}"
+    apply_link = f"{settings.FRONTEND_URL.rstrip('/')}/apply/{unique_public_id}"
 
     print(f"Application form: {apply_link}")
 
@@ -132,13 +178,23 @@ def create_job(job_data: schemas.JobCreate, db: Session = Depends(get_db), user_
     db.add(new_job)
     db.flush()
 
+    linkedin_warning = None
     if "linkedin" in job_data.platforms:
         user = db.query(models.User).filter(models.User.id == user_id).first()
         text = f"We are hiring a {job_data.positionName} in {job_data.location}!\n\n{job_data.description}\n\nApply now directly at: {apply_link}"
-        new_job.linkedin_url = post_to_linkedin(text, user.linkedin_token)
+        linkedin_url, linkedin_error = post_to_linkedin(text, user.linkedin_token)
+        new_job.linkedin_url = linkedin_url
+        if linkedin_error:
+            linkedin_warning = f"Job created, but LinkedIn posting failed: {linkedin_error}"
+            print(f"[LinkedIn] Warning stored: {linkedin_warning}")
 
     db.commit()
     db.refresh(new_job)
+
+    # Attach transient warning so the response schema can surface it
+    if linkedin_warning:
+        new_job.linkedinWarning = linkedin_warning
+
     return new_job
 
 @router.get("/{public_id}/public", response_model=schemas.JobPublicOut)
@@ -163,6 +219,17 @@ def close_job(job_id: int, db: Session = Depends(get_db), user_id: int = Depends
     if job.status == "closed": raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Job is already closed")
 
     job.status = "closed"
+    db.commit()
+    return {"status": "success"}
+
+
+@router.delete("/{job_id}")
+def delete_job(job_id: int, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    job = db.query(models.Job).filter(models.Job.id == job_id, models.Job.user_id == user_id).first()
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    db.query(models.Candidate).filter(models.Candidate.job_id == job_id).delete(synchronize_session=False)
+    db.delete(job)
     db.commit()
     return {"status": "success"}
 
@@ -204,7 +271,7 @@ def apply_to_job(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(resume.file, buffer)
     
-    resume_url = f"http://localhost:8000/uploads/resumes/job_{job.id}/{unique_filename}"
+    resume_url = f"{settings.BACKEND_URL.rstrip('/')}/uploads/resumes/job_{job.id}/{unique_filename}"
 
     # Save Candidate to DB
     new_cand = models.Candidate(
@@ -242,7 +309,12 @@ def score_candidates(job_id: int, filters: schemas.FilterPayload, db: Session = 
     req_edu_idx = EDU_ORDER.index(filters.education) if filters.education != 'All' else 0
     exp_min = EXP_MINS[filters.expRange]
 
-    score_idx = 0
+    # Load the AI ranker once — model is cached after first load
+    try:
+        ranker = ResumeRanker()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to initialise AI scorer: {str(e)}")
+
     for c in job.candidates:
         cand_edu_idx = EDU_ORDER.index(c.education_level) if c.education_level in EDU_ORDER else 0
         if cand_edu_idx >= req_edu_idx and c.years_of_experience >= exp_min:
@@ -250,9 +322,39 @@ def score_candidates(job_id: int, filters: schemas.FilterPayload, db: Session = 
             if filters.salary == 'above' and c.salary_expectation <= job.salary_max: continue
             if filters.negotiable != 'All' and c.salary_negotiable != (filters.negotiable == 'Yes'): continue
             if filters.workTypeComfort != 'All' and c.comfortable_with_work_type != (filters.workTypeComfort == 'Yes'): continue
-            
-            c.ai_score = MOCK_AI_SCORES[score_idx % len(MOCK_AI_SCORES)]
-            score_idx += 1
+
+            # Convert stored URL to a local file path relative to the backend directory
+            resume_path = _resume_link_to_path(c.resume_link)
+            try:
+                result = ranker.score(resume_path=resume_path, jd_text=job.description)
+                c.ai_score = float(result["final_score"])
+                bd = result["score_breakdown"]
+                c.ai_score_data = {
+                    "category": result["category"],
+                    "breakdown": [
+                        {"key": "skill_match",       "label": "Skill Match",           "points": bd["skill_match     (30%)"], "max": 30,  "penalty": False},
+                        {"key": "experience",        "label": "Experience",             "points": bd["experience      (22%)"], "max": 22,  "penalty": False},
+                        {"key": "semantic_overall",  "label": "Semantic (Overall)",     "points": bd["semantic_overall(16%)"], "max": 16,  "penalty": False},
+                        {"key": "semantic_weighted", "label": "Semantic (Weighted)",    "points": bd["semantic_weighted(10%)"], "max": 10, "penalty": False},
+                        {"key": "education",         "label": "Education",              "points": bd["education        (6%)"], "max": 6,   "penalty": False},
+                        {"key": "certifications",    "label": "Certifications",         "points": bd["certifications   (4%)"], "max": 4,   "penalty": False},
+                        {"key": "skill_count",       "label": "Skill Count",            "points": bd["skill_count      (4%)"], "max": 4,   "penalty": False},
+                        {"key": "skills_breadth",    "label": "Skills Breadth",         "points": bd["skills_breadth   (4%)"], "max": 4,   "penalty": False},
+                        {"key": "jd_coverage",       "label": "JD Coverage",            "points": bd["jd_coverage      (4%)"], "max": 4,   "penalty": False},
+                        {"key": "missing_penalty",   "label": "Missing Skill Penalty",  "points": bd["missing_penalty(-12%)"], "max": 12,  "penalty": True},
+                    ],
+                    "skill_match_pct":     result["skill_match_pct"],
+                    "matched_skills":      result["matched_skills"],
+                    "missing_skills":      result["missing_skills"],
+                    "semantic_similarity": result["semantic_similarity"],
+                    "experience_years":    result["experience_years"],
+                    "education_level":     result["education_level"],
+                    "certifications":      result.get("certifications", []),
+                }
+            except Exception as e:
+                print(f"[AI Scoring] Error scoring candidate {c.id}: {e}")
+                c.ai_score = None
+                c.ai_score_data = None
         else:
             c.ai_score = None
 
@@ -283,18 +385,43 @@ def send_invites(job_id: int, payload: schemas.InvitePayload, bg_tasks: Backgrou
             c.interview_status = "invited"
             c.interview_token = secrets.token_urlsafe(32)
             c.interview_token_expires_at = datetime.now(timezone.utc) + timedelta(days=job.interview_deadline_days)
-            
-            interview_link = f"http://localhost:5173/interview/{c.interview_token}"
-            body = f"Hi {c.full_name},\n\nYou have been shortlisted for {job.position_name}! Please complete your AI interview within {job.interview_deadline_days} days using this link:\n\n{interview_link}\n\nLink expires on: {c.interview_token_expires_at.strftime('%Y-%m-%d')}"
-            bg_tasks.add_task(send_email, c.email, f"Interview Invitation: {job.position_name} at RecEasy", body)
+            interview_link = f"{settings.FRONTEND_URL.rstrip('/')}/interview/{c.interview_token}"
+            expires_date = c.interview_token_expires_at.strftime('%B %d, %Y')
+            body = build_invite_email(c.full_name, job.position_name, interview_link, job.interview_deadline_days, expires_date)
+            bg_tasks.add_task(send_email, c.email, f"Congratulations! Interview Invitation — {job.position_name}", body)
         else:
             c.interview_status = "filtered_out"
-            body = f"Hi {c.full_name},\n\nThank you for applying for {job.position_name}. Unfortunately, we will not be moving forward with your application at this time.\n\nBest wishes,\nHiring Team"
-            bg_tasks.add_task(send_email, c.email, f"Application Update: {job.position_name}", body)
+            body = build_rejection_email(c.full_name, job.position_name)
+            bg_tasks.add_task(send_email, c.email, f"Your Application for {job.position_name}", body)
 
     job.invites_sent = True
     db.commit()
     return {"status": "success", "invited_count": len(invited_cands)}
+
+
+@router.post("/{job_id}/candidates/{cand_id}/invite")
+def invite_single_candidate(job_id: int, cand_id: int, bg_tasks: BackgroundTasks, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    job = db.query(models.Job).filter(models.Job.id == job_id, models.Job.user_id == user_id).first()
+    if not job: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    if not job.ai_scoring_done:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="AI scoring must be completed before sending invites.")
+
+    cand = db.query(models.Candidate).filter(models.Candidate.id == cand_id, models.Candidate.job_id == job_id).first()
+    if not cand: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if cand.interview_status == "invited":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Candidate has already been invited.")
+
+    cand.interview_status = "invited"
+    cand.interview_token = secrets.token_urlsafe(32)
+    cand.interview_token_expires_at = datetime.now(timezone.utc) + timedelta(days=job.interview_deadline_days)
+    interview_link = f"{settings.FRONTEND_URL.rstrip('/')}/interview/{cand.interview_token}"
+    expires_date = cand.interview_token_expires_at.strftime('%B %d, %Y')
+    body = build_invite_email(cand.full_name, job.position_name, interview_link, job.interview_deadline_days, expires_date)
+    bg_tasks.add_task(send_email, cand.email, f"Congratulations! Interview Invitation — {job.position_name}", body)
+
+    db.commit()
+    return {"status": "success"}
 
 @router.post("/{job_id}/candidates/{cand_id}/interview")
 def complete_interview(job_id: int, cand_id: int, payload: schemas.InterviewScorePayload, bg_tasks: BackgroundTasks, db: Session = Depends(get_db)):

@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from app.database import engine, Base
-from app.routers import auth_router, contact_router, job_router, settings_router
+from app.config import settings
+from app.routers import auth_router, contact_router, job_router, settings_router, interview_router
 
 # can switch later in prod: Alembic for migrations instead of create_all()
 Base.metadata.create_all(bind=engine)
@@ -14,10 +15,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
+_cors_origins = (
+    ["*"]
+    if settings.CORS_ORIGINS.strip() == "*"
+    else [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -31,6 +38,7 @@ app.include_router(auth_router.router)
 app.include_router(contact_router.router)
 app.include_router(job_router.router)
 app.include_router(settings_router.router)
+app.include_router(interview_router.router)
 
 @app.get("/")
 def health_check():

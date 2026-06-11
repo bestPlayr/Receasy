@@ -11,7 +11,8 @@ import Contact from './components/Contact';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import Dashboard from './components/dashboard/Dashboard';
-import TestApply from './components/TestApply';
+import Apply from './components/Apply';
+import Interview from './components/Interview';
 import { api } from './api';
 
 function Toast({ message, onDone }) {
@@ -33,7 +34,13 @@ function App() {
   if (currentPath.startsWith('/apply/')) {
     const publicId = currentPath.split('/')[2];
     if (publicId) {
-      return <TestApply publicId={publicId} />;
+      return <Apply publicId={publicId} />;
+    }
+  }
+  if (currentPath.startsWith('/interview/')) {
+    const token = currentPath.split('/')[2];
+    if (token) {
+      return <Interview token={token} />;
     }
   }
 

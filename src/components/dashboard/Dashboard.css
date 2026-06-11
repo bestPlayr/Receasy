@@ -11,7 +11,8 @@
 .db-sidebar {
   width: 235px;
   flex-shrink: 0;
-  background: var(--gray-900);
+  background: linear-gradient(180deg, #0e1c30 0%, #0f172a 45%, #0a2239 100%);
+  border-right: 1px solid rgba(56, 189, 248, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -33,7 +34,7 @@
 .db-sidebar-logo-icon {
   width: 34px;
   height: 34px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -77,10 +78,26 @@
   transition: background 0.15s, color 0.15s;
 }
 
+.db-nav-item { position: relative; }
+
 .db-nav-item:hover  { background: rgba(255,255,255,0.07); color: #e2e8f0; }
 .db-nav-item.active {
-  background: rgba(14, 165, 233, 0.18);
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.22), rgba(56, 189, 248, 0.12));
   color: var(--blue-300);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.18);
+}
+
+.db-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: var(--brand-gradient);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
 }
 
 .db-sidebar-footer {
@@ -102,7 +119,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,7 +150,8 @@
 .db-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .db-topbar {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--blue-100);
   padding: 0 28px;
   height: 64px;
@@ -148,7 +166,14 @@
 .db-topbar-subtitle { font-size: 0.78rem; color: var(--gray-400); margin-top: 1px; }
 .db-topbar-actions  { display: flex; align-items: center; gap: 10px; }
 
-.db-content { flex: 1; overflow-y: auto; padding: 26px 30px; }
+.db-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 30px;
+  background:
+    radial-gradient(ellipse 60% 40% at 80% 0%, rgba(14, 165, 233, 0.05), transparent 60%),
+    var(--gray-50);
+}
 
 /* ── Section header ─────────────────────────────────────────────────────────── */
 .db-section-header {
@@ -161,7 +186,7 @@
 
 /* ── Dashboard Home — Banner ────────────────────────────────────────────────── */
 .db-home-banner {
-  background: linear-gradient(135deg, var(--blue-700) 0%, var(--blue-900) 100%);
+  background: linear-gradient(120deg, #0369a1 0%, #0284c7 45%, #0ea5e9 100%);
   border-radius: 20px;
   padding: 24px 28px;
   display: flex;
@@ -170,7 +195,7 @@
   margin-bottom: 26px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.25);
+  box-shadow: 0 12px 40px rgba(14, 165, 233, 0.35);
 }
 
 .db-home-banner::before {
@@ -178,8 +203,18 @@
   position: absolute;
   top: -60px; right: -60px;
   width: 220px; height: 220px;
-  background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
   border-radius: 50%;
+}
+
+.db-home-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: 30%;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .db-home-greeting {
@@ -239,7 +274,7 @@
 .db-create-job-icon {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -365,7 +400,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -375,7 +410,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.25);
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
 }
 .db-btn-primary:hover {
   transform: translateY(-1px);
@@ -561,7 +596,7 @@
 }
 .db-filter-chip:hover  { border-color: var(--blue-300); color: var(--blue-600); background: var(--blue-50); }
 .db-filter-chip.active {
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border-color: transparent;
   color: #fff;
   box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
@@ -962,3 +997,126 @@
 }
 .db-placeholder h3 { font-size: 1rem; color: var(--gray-600); font-weight: 600; margin: 0; }
 .db-placeholder p  { font-size: 0.84rem; margin: 0; }
+
+/* ── Days / Hours / Seconds duration input ───────────────────────────────────── */
+.db-dhs-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.db-dhs-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.db-dhs-input {
+  text-align: center;
+  padding: 8px 6px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  min-width: 0;
+}
+
+.db-dhs-label {
+  font-size: 0.68rem;
+  color: var(--gray-400);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.db-dhs-sep {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gray-300);
+  padding-bottom: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Three-dot job card menu ─────────────────────────────────────────────────── */
+.db-job-menu-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-400);
+  padding: 3px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+.db-job-menu-btn:hover { background: var(--gray-100); color: var(--gray-700); }
+
+.db-job-menu-dropdown {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  z-index: 40;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 140px;
+  overflow: hidden;
+  animation: db-fade-in 0.12s ease;
+}
+
+.db-job-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.db-job-menu-item:hover { background: #f8fafc; }
+.db-job-menu-item--danger { color: #dc2626; }
+.db-job-menu-item--danger:hover { background: #fff1f2; }
+
+/* ── Per-candidate invite button ─────────────────────────────────────────────── */
+.db-btn-invite-cand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0284c7;
+  background: #eff6ff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.db-btn-invite-cand:hover:not(:disabled) { background: #0284c7; color: #fff; border-color: #0284c7; }
+.db-btn-invite-cand:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Spinner (reused) ────────────────────────────────────────────────────────── */
+.db-btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: db-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes db-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

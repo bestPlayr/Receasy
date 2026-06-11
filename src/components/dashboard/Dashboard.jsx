@@ -6,6 +6,7 @@ import {
   Plus, X, ExternalLink, GraduationCap, DollarSign,
   Calendar, Laptop, Building, Globe, Filter, Search,
   Settings, Link, AlertTriangle, Eye, EyeOff, Trash2,
+  MoreVertical, UserCheck,
 } from 'lucide-react';
 
 import { api } from '../../api';
@@ -49,18 +50,37 @@ const EXP_RANGES = [
 
 const scoreColor = (s) => s >= 85 ? '#16a34a' : s >= 70 ? '#d97706' : '#dc2626';
 
-// Fixed AI scores for mock (assigned by candidate order, highest to lowest)
-const MOCK_AI_SCORES = [96, 91, 88, 78, 72, 94, 87, 76, 93, 85, 97, 89, 74, 61];
+function computeCountdown(iso) {
+  if (!iso) return null;
+  const diff = new Date(iso) - Date.now();
+  if (diff <= 0) return 'Closed';
+  const totalSec = Math.floor(diff / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const secs = totalSec % 60;
+  return `${days}d ${hours}h ${secs}s`;
+}
+
+function useCountdown(iso) {
+  const [label, setLabel] = useState(() => computeCountdown(iso));
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() => setLabel(computeCountdown(iso)), 1000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return label;
+}
 
 // ─── Shared components ────────────────────────────────────────────────────────
 
 function ScoreCircle({ score, size = 44 }) {
+  const display = typeof score === 'number' ? (Number.isInteger(score) ? score : score.toFixed(1)) : score;
   return (
     <div
       className="db-score-circle"
-      style={{ width: size, height: size, background: scoreColor(score), fontSize: size < 44 ? '0.7rem' : '0.78rem' }}
+      style={{ width: size, height: size, background: '#0284c7', fontSize: size < 44 ? '0.7rem' : '0.78rem' }}
     >
-      {score}%
+      {display}%
     </div>
   );
 }
@@ -81,6 +101,12 @@ function CreateJobModal({ onClose, onCreate, onGoToSettings, linkedinConfigured 
     workType: 'remote',
     location: '',
     platforms: ['linkedin'],
+    closingDays: 7,
+    closingHours: 0,
+    closingSecs: 0,
+    interviewDays: 7,
+    interviewHours: 0,
+    interviewSecs: 0,
   });
   const [errors, setErrors] = useState({});
 
@@ -131,6 +157,19 @@ function CreateJobModal({ onClose, onCreate, onGoToSettings, linkedinConfigured 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
+    const closingTotalSecs =
+      Number(form.closingDays) * 86400 +
+      Number(form.closingHours) * 3600 +
+      Number(form.closingSecs);
+    const deadlineDate = new Date(Date.now() + closingTotalSecs * 1000);
+
+    const interviewTotalSecs =
+      Number(form.interviewDays) * 86400 +
+      Number(form.interviewHours) * 3600 +
+      Number(form.interviewSecs);
+    // backend stores as days (float) — timedelta(days=x) handles fractional days fine
+    const interviewDeadlineDays = interviewTotalSecs / 86400;
+
     onCreate({
       positionName: form.positionName.trim(),
       description: form.description.trim(),
@@ -142,6 +181,8 @@ function CreateJobModal({ onClose, onCreate, onGoToSettings, linkedinConfigured 
       workType: form.workType,
       location: form.location.trim(),
       platforms: form.platforms,
+      applicationDeadline: deadlineDate.toISOString(),
+      interviewDeadlineDays,
     });
   };
 
@@ -326,6 +367,89 @@ function CreateJobModal({ onClose, onCreate, onGoToSettings, linkedinConfigured 
               {errors.location && <span className="db-form-error">{errors.location}</span>}
             </div>
 
+            {/* Closing Timeline */}
+            <div className="db-form-group">
+              <label className="db-form-label">
+                <Calendar size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                Job Closing Timeline <span className="db-form-req">*</span>
+              </label>
+              <div className="db-dhs-row">
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="365"
+                    value={form.closingDays}
+                    onChange={e => set('closingDays', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Days</span>
+                </div>
+                <div className="db-dhs-sep">:</div>
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="23"
+                    value={form.closingHours}
+                    onChange={e => set('closingHours', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Hours</span>
+                </div>
+                <div className="db-dhs-sep">:</div>
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="59"
+                    value={form.closingSecs}
+                    onChange={e => set('closingSecs', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Seconds</span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 6, display: 'block' }}>
+                Job closes automatically after this duration. You will be notified by email.
+              </span>
+            </div>
+
+            {/* Interview Deadline */}
+            <div className="db-form-group">
+              <label className="db-form-label">
+                Interview Deadline
+              </label>
+              <div className="db-dhs-row">
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="60"
+                    value={form.interviewDays}
+                    onChange={e => set('interviewDays', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Days</span>
+                </div>
+                <div className="db-dhs-sep">:</div>
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="23"
+                    value={form.interviewHours}
+                    onChange={e => set('interviewHours', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Hours</span>
+                </div>
+                <div className="db-dhs-sep">:</div>
+                <div className="db-dhs-field">
+                  <input
+                    className="db-form-input db-dhs-input"
+                    type="number" min="0" max="59"
+                    value={form.interviewSecs}
+                    onChange={e => set('interviewSecs', e.target.value)}
+                  />
+                  <span className="db-dhs-label">Seconds</span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 6, display: 'block' }}>
+                Time candidates have to complete their AI interview after receiving the invite.
+              </span>
+            </div>
+
             {/* Platforms */}
             <div className="db-form-group">
               <label className="db-form-label">Platforms to Post On</label>
@@ -482,7 +606,7 @@ function SettingsView({ linkedinConfigured, onSave, onRemove }) {
           <button
             onClick={handleSave}
             disabled={saving || !token.trim()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: token.trim() ? '#4F46E5' : '#e2e8f0', color: token.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, cursor: token.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: token.trim() ? '#0284c7' : '#e2e8f0', color: token.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: 8, fontSize: '0.85rem', fontWeight: 600, cursor: token.trim() ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}
           >
             {saving ? 'Saving…' : localConfigured ? 'Update Token' : 'Save Token'}
           </button>
@@ -490,7 +614,7 @@ function SettingsView({ linkedinConfigured, onSave, onRemove }) {
 
         <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, fontSize: '0.78rem', color: '#64748b', lineHeight: 1.6 }}>
           <strong style={{ color: '#475569' }}>How to get your token:</strong> Go to the{' '}
-          <a href="https://www.linkedin.com/developers/" target="_blank" rel="noreferrer" style={{ color: '#4F46E5' }}>LinkedIn Developer Portal</a>,
+          <a href="https://www.linkedin.com/developers/" target="_blank" rel="noreferrer" style={{ color: '#0284c7' }}>LinkedIn Developer Portal</a>,
           create an app, and generate an OAuth 2.0 access token with <code style={{ background: '#e2e8f0', padding: '1px 5px', borderRadius: 4 }}>w_member_social</code> scope.
         </div>
       </div>
@@ -500,7 +624,7 @@ function SettingsView({ linkedinConfigured, onSave, onRemove }) {
 
 // ─── Dashboard Home ────────────────────────────────────────────────────────────
 
-function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob }) {
+function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob, onDeleteJob }) {
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -511,6 +635,25 @@ function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob }) {
 
   const openCount   = jobs.filter(j => j.status === 'open').length;
   const closedCount = jobs.filter(j => j.status === 'closed').length;
+
+  const [menuJobId, setMenuJobId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name, candidateCount }
+
+  const openMenu = (e, job) => {
+    e.stopPropagation();
+    setMenuJobId(prev => prev === job.id ? null : job.id);
+  };
+
+  const confirmDelete = (e, job) => {
+    e.stopPropagation();
+    setMenuJobId(null);
+    setDeleteTarget({ id: job.id, name: job.positionName, candidateCount: job.candidates.length });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) onDeleteJob(deleteTarget.id);
+    setDeleteTarget(null);
+  };
 
   return (
     <>
@@ -554,7 +697,9 @@ function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob }) {
 
         {/* Job Cards */}
         {jobs.map(job => (
-          <div className="db-dash-job-card" key={job.id} onClick={() => onSelectJob(job)}>
+          <div className="db-dash-job-card" key={job.id} onClick={() => { setMenuJobId(null); onSelectJob(job); }}
+            style={{ position: 'relative' }}
+          >
             <div className="db-dash-job-card-top">
               <div className="db-dash-job-icon">
                 <Briefcase size={18} />
@@ -569,6 +714,21 @@ function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob }) {
               >
                 {job.status === 'open' ? '● Open' : '● Closed'}
               </span>
+              {/* Three-dot menu */}
+              <button
+                className="db-job-menu-btn"
+                onClick={e => openMenu(e, job)}
+                title="More options"
+              >
+                <MoreVertical size={15} />
+              </button>
+              {menuJobId === job.id && (
+                <div className="db-job-menu-dropdown" onClick={e => e.stopPropagation()}>
+                  <button className="db-job-menu-item db-job-menu-item--danger" onClick={e => confirmDelete(e, job)}>
+                    <Trash2 size={13} /> Delete Job
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="db-dash-job-name">{job.positionName}</div>
@@ -602,6 +762,39 @@ function DashboardHomeView({ jobs, user, onCreateJob, onSelectJob }) {
           </div>
         ))}
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="db-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="db-modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="db-modal-header">
+              <h2 className="db-modal-title" style={{ color: '#dc2626' }}>
+                <Trash2 size={17} /> Delete Job
+              </h2>
+              <button className="db-modal-close" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
+            </div>
+            <div className="db-modal-body" style={{ padding: '20px 24px' }}>
+              <p style={{ marginBottom: 10, color: '#1e293b', fontSize: '0.95rem' }}>
+                Are you sure you want to delete <strong>"{deleteTarget.name}"</strong>?
+              </p>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', lineHeight: 1.55 }}>
+                ⚠ This will permanently delete the job and all{' '}
+                <strong>{deleteTarget.candidateCount}</strong> associated candidate
+                {deleteTarget.candidateCount !== 1 ? 's' : ''}. This action cannot be undone.
+              </p>
+            </div>
+            <div className="db-modal-footer">
+              <button className="db-btn-ghost" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button
+                style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={handleDeleteConfirm}
+              >
+                <Trash2 size={14} /> Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -635,10 +828,12 @@ function applyFilters(candidates, filters, job) {
   });
 }
 
-function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelectCandidate }) {
+function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSendCandidateInvite, onSelectCandidate }) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [aiRunning, setAiRunning]       = useState(false);
   const [inviteCount, setInviteCount]   = useState(1);
+  const [invitingId, setInvitingId]     = useState(null);
+  const closingCountdown = useCountdown(job.applicationDeadline);
   const [filters, setFilters] = useState({
     education:       'All',
     expRange:        0,
@@ -726,6 +921,39 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
                 </span>
               )}
             </div>
+
+            {/* Apply link + deadline */}
+            {job.applicationFormUrl && (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.77rem', color: '#64748b', fontWeight: 600, flexShrink: 0 }}>
+                  <ExternalLink size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                  Apply at:
+                </span>
+                <a
+                  href={job.applicationFormUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: '0.77rem', color: '#0284c7', fontWeight: 500, wordBreak: 'break-all', flex: 1 }}
+                >
+                  {job.applicationFormUrl}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(job.applicationFormUrl)}
+                  style={{ fontSize: '0.72rem', padding: '3px 10px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Copy
+                </button>
+                {job.applicationDeadline && (
+                  <span style={{ fontSize: '0.72rem', color: job.status === 'open' && closingCountdown !== 'Closed' ? '#d97706' : '#94a3b8', fontWeight: 600, flexShrink: 0 }}>
+                    <Calendar size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                    {job.status === 'open' && closingCountdown && closingCountdown !== 'Closed'
+                      ? `Closes in ${closingCountdown}`
+                      : `Closed ${new Date(job.applicationDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action Panel */}
@@ -894,7 +1122,7 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
           </span>
         </span>
         {job.aiScoringDone && (
-          <span style={{ fontSize: '0.78rem', color: '#6366f1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: '0.78rem', color: '#0ea5e9', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
             <Bot size={13} /> Ranked by AI Score
           </span>
         )}
@@ -950,7 +1178,7 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
               )}
 
               {c.interviewGiven && c.interviewScore !== null && (
-                <div style={{ textAlign: 'center', fontSize: '0.72rem', color: '#6366f1' }}>
+                <div style={{ textAlign: 'center', fontSize: '0.72rem', color: '#0ea5e9' }}>
                   <div style={{ fontWeight: 800, fontSize: '1rem', color: scoreColor(c.interviewScore) }}>
                     {c.interviewScore}%
                   </div>
@@ -962,6 +1190,25 @@ function JobDetailView({ job, onCloseJob, onRunAIScoring, onSendInvites, onSelec
                 <span className="db-badge" style={{ background: interviewBadge.bg, color: interviewBadge.color }}>
                   {interviewBadge.label}
                 </span>
+              )}
+
+              {/* Per-candidate invite button */}
+              {job.aiScoringDone && c.aiScore !== null && !c.interviewStatus && (
+                <button
+                  className="db-btn-invite-cand"
+                  disabled={invitingId === c.id}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setInvitingId(c.id);
+                    await onSendCandidateInvite(job.id, c.id);
+                    setInvitingId(null);
+                  }}
+                  title="Send interview invite to this candidate"
+                >
+                  {invitingId === c.id
+                    ? <><span className="db-btn-spinner" style={{ width: 12, height: 12 }} />Inviting…</>
+                    : <><UserCheck size={13} />Send Invite</>}
+                </button>
               )}
 
               <span className="db-view-btn">View</span>
@@ -1015,8 +1262,8 @@ function CandidateProfileView({ candidate: c, job }) {
         {/* AI Score */}
         {job.aiScoringDone && c.aiScore !== null && (
           <div className="db-profile-score-lg">
-            <div className="db-profile-score-circle" style={{ background: scoreColor(c.aiScore) }}>
-              {c.aiScore}%
+            <div className="db-profile-score-circle" style={{ background: '#0284c7' }}>
+              {typeof c.aiScore === 'number' ? c.aiScore.toFixed(1) : c.aiScore}%
             </div>
             <div className="db-profile-score-label">AI Score</div>
           </div>
@@ -1033,6 +1280,117 @@ function CandidateProfileView({ candidate: c, job }) {
         )}
       </div>
 
+      {/* AI Score Breakdown */}
+      {job.aiScoringDone && c.aiScore !== null && c.aiScoreData && (
+        <div style={{ padding: '0 28px 24px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '18px 22px' }}>
+
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                  {c.aiScore.toFixed(1)}
+                </span>
+                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>/ 100</span>
+                <span style={{ marginLeft: 6, padding: '2px 10px', background: '#e0f2fe', color: '#0369a1', borderRadius: 100, fontSize: '0.75rem', fontWeight: 700 }}>
+                  {c.aiScoreData.category}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                AI Score Breakdown
+              </span>
+            </div>
+
+            {/* Breakdown bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {c.aiScoreData.breakdown.map(item => {
+                const pct = item.penalty
+                  ? Math.min(Math.abs(item.points) / item.max, 1)
+                  : Math.min(item.points / item.max, 1);
+                return (
+                  <div key={item.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 52px', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.label}
+                    </span>
+                    <div style={{ height: 7, background: '#e2e8f0', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${pct * 100}%`,
+                        background: item.penalty ? '#f87171' : '#0ea5e9',
+                        borderRadius: 99,
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: item.penalty ? '#dc2626' : '#0f172a', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {item.penalty ? '−' : '+'}{Math.abs(item.points).toFixed(1)} / {item.max}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: '#e2e8f0', margin: '16px 0' }} />
+
+            {/* Skills + metrics row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+              {/* Matched skills */}
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>
+                  Matched Skills ({c.aiScoreData.matched_skills?.length || 0})
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {c.aiScoreData.matched_skills?.length > 0
+                    ? c.aiScoreData.matched_skills.map(s => (
+                        <span key={s} style={{ padding: '2px 9px', background: '#dcfce7', color: '#15803d', borderRadius: 100, fontSize: '0.72rem', fontWeight: 600 }}>{s}</span>
+                      ))
+                    : <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>None matched</span>
+                  }
+                </div>
+              </div>
+
+              {/* Missing skills */}
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>
+                  Missing Skills ({c.aiScoreData.missing_skills?.length || 0})
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {c.aiScoreData.missing_skills?.length > 0
+                    ? c.aiScoreData.missing_skills.map(s => (
+                        <span key={s} style={{ padding: '2px 9px', background: '#fee2e2', color: '#b91c1c', borderRadius: 100, fontSize: '0.72rem', fontWeight: 600 }}>{s}</span>
+                      ))
+                    : <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>None missing</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Metric pills */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+              <span style={{ padding: '4px 12px', background: '#f1f5f9', borderRadius: 100, fontSize: '0.76rem', color: '#475569' }}>
+                🎯 Skill match <strong style={{ color: '#0f172a' }}>{c.aiScoreData.skill_match_pct}%</strong>
+              </span>
+              <span style={{ padding: '4px 12px', background: '#f1f5f9', borderRadius: 100, fontSize: '0.76rem', color: '#475569' }}>
+                🔗 Semantic sim. <strong style={{ color: '#0f172a' }}>{(c.aiScoreData.semantic_similarity * 100).toFixed(1)}%</strong>
+              </span>
+              <span style={{ padding: '4px 12px', background: '#f1f5f9', borderRadius: 100, fontSize: '0.76rem', color: '#475569' }}>
+                ⏱ Detected exp. <strong style={{ color: '#0f172a' }}>{c.aiScoreData.experience_years?.toFixed(1)} yrs</strong>
+              </span>
+              <span style={{ padding: '4px 12px', background: '#f1f5f9', borderRadius: 100, fontSize: '0.76rem', color: '#475569' }}>
+                🎓 Education <strong style={{ color: '#0f172a' }}>{c.aiScoreData.education_level}</strong>
+              </span>
+              {c.aiScoreData.certifications?.length > 0 && (
+                <span style={{ padding: '4px 12px', background: '#f1f5f9', borderRadius: 100, fontSize: '0.76rem', color: '#475569' }}>
+                  📜 Certs: <strong style={{ color: '#0f172a' }}>{c.aiScoreData.certifications.slice(0, 3).join(', ')}</strong>
+                </span>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       <div className="db-profile-body">
 
@@ -1041,7 +1399,7 @@ function CandidateProfileView({ candidate: c, job }) {
           <div className="db-profile-section">
             <div className="db-profile-section-title">Education</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <GraduationCap size={20} style={{ color: '#6366f1', flexShrink: 0 }} />
+              <GraduationCap size={20} style={{ color: '#0ea5e9', flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>{c.educationLevel}</div>
                 <div style={{ fontSize: '0.82rem', color: '#64748b' }}>{c.university}</div>
@@ -1157,6 +1515,16 @@ function CandidateProfileView({ candidate: c, job }) {
                         {c.interviewScore}%
                       </strong>
                     </div>
+                    {c.interviewFeedback && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Bot size={12} /> AI Interview Feedback
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                          {c.interviewFeedback}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1183,9 +1551,9 @@ export default function Dashboard({ user, onLogout }) {
     ? user.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 5000);
   };
 
   const fetchJobs = async () => {
@@ -1203,12 +1571,14 @@ export default function Dashboard({ user, onLogout }) {
         workType: job.work_type || job.workType,
         aiScoringDone: job.ai_scoring_done ?? job.aiScoringDone,
         invitesSent: job.invites_sent ?? job.invitesSent,
+        applicationFormUrl: job.application_form_url || job.applicationFormUrl || null,
+        applicationDeadline: job.application_deadline || job.applicationDeadline || null,
         postedAt: new Date(job.posted_at || job.postedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         candidates: (job.candidates || []).map(c => ({
           ...c,
           name: c.full_name,
           initials: c.full_name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2),
-          color: '#4F46E5', // Mock color to maintain UI consistency
+          color: '#0284c7', // Mock color to maintain UI consistency
           educationLevel: c.education_level,
           yearsOfExperience: c.years_of_experience,
           salaryExpectation: c.salary_expectation,
@@ -1217,9 +1587,11 @@ export default function Dashboard({ user, onLogout }) {
           githubLink: c.github_link,
           resumeLink: c.resume_link,
           aiScore: c.ai_score,
+          aiScoreData: c.ai_score_data || null,
           interviewStatus: c.interview_status,
           interviewGiven: c.interview_given,
           interviewScore: c.interview_score,
+          interviewFeedback: c.interview_feedback || null,
           appliedAt: new Date(c.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         }))
       }));
@@ -1252,12 +1624,16 @@ export default function Dashboard({ user, onLogout }) {
 
   const handleCreateJob = async (formData) => {
     try {
-      await api.createJob(formData);
+      const created = await api.createJob(formData);
       await fetchJobs();
       setShowCreateModal(false);
-      showToast('Job successfully created!');
+      if (created?.linkedinWarning) {
+        showToast(created.linkedinWarning, 'warn');
+      } else {
+        showToast('Job successfully created!');
+      }
     } catch (err) {
-      showToast(err.message || 'Error creating job');
+      showToast(err.message || 'Error creating job', 'error');
     }
   };
 
@@ -1288,6 +1664,27 @@ export default function Dashboard({ user, onLogout }) {
       showToast(`Interview invites sent to ${res.invited_count} candidate(s)!`);
     } catch (err) {
       showToast(err.message || 'Error sending invites');
+    }
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    try {
+      await api.deleteJob(jobId);
+      if (selectedJobId === jobId) { setSelectedJobId(null); setView('home'); }
+      await fetchJobs();
+      showToast('Job deleted successfully.');
+    } catch (err) {
+      showToast(err.message || 'Error deleting job', 'error');
+    }
+  };
+
+  const handleSendCandidateInvite = async (jobId, candidateId) => {
+    try {
+      await api.sendCandidateInvite(jobId, candidateId);
+      await fetchJobs();
+      showToast('Interview invite sent!');
+    } catch (err) {
+      showToast(err.message || 'Error sending invite', 'error');
     }
   };
 
@@ -1413,6 +1810,7 @@ export default function Dashboard({ user, onLogout }) {
               user={user}
               onCreateJob={() => setShowCreateModal(true)}
               onSelectJob={(job) => { setSelectedJobId(job.id); setView('job-detail'); }}
+              onDeleteJob={handleDeleteJob}
             />
           )}
 
@@ -1422,6 +1820,7 @@ export default function Dashboard({ user, onLogout }) {
               onCloseJob={handleCloseJob}
               onRunAIScoring={handleRunAIScoring}
               onSendInvites={handleSendInvites}
+              onSendCandidateInvite={handleSendCandidateInvite}
               onSelectCandidate={(c) => { setSelectedCandidateId(c.id); setView('candidate'); }}
             />
           )}
@@ -1445,9 +1844,22 @@ export default function Dashboard({ user, onLogout }) {
 
       {/* Toast */}
       {toast && (
-        <div className="db-toast">
-          <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
-          {toast}
+        <div
+          className="db-toast"
+          style={
+            toast.type === 'warn'
+              ? { background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }
+              : toast.type === 'error'
+              ? { background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c' }
+              : {}
+          }
+        >
+          {toast.type === 'warn'
+            ? <AlertTriangle size={16} style={{ color: '#d97706', flexShrink: 0 }} />
+            : toast.type === 'error'
+            ? <XCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
+            : <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />}
+          {toast.msg}
         </div>
       )}
 

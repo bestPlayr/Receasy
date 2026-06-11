@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, text
+from sqlalchemy import Column, Integer, Float, String, Text, DateTime, Boolean, ForeignKey, text, JSON
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -67,11 +67,13 @@ class Candidate(Base):
     comfortable_with_work_type = Column(Boolean, nullable=False)
     github_link = Column(String, nullable=True)
     resume_link = Column(String, nullable=False)
-    ai_score = Column(Integer, nullable=True)
+    ai_score = Column(Float, nullable=True)
+    ai_score_data = Column(JSON, nullable=True)
     interview_status = Column(String, nullable=True)
     interview_token = Column(String, nullable=True, unique=True, index=True)
     interview_token_expires_at = Column(DateTime(timezone=True), nullable=True)
     interview_given = Column(Boolean, default=False)
     interview_score = Column(Integer, nullable=True)
+    interview_feedback = Column(Text, nullable=True)
     applied_at = Column(DateTime(timezone=True), server_default=func.now())
     job = relationship("Job", back_populates="candidates")

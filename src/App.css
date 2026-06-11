@@ -36,7 +36,7 @@
 .navbar-logo-icon {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -106,7 +106,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border: none;
   transition: all 0.2s ease;
   box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
@@ -202,7 +202,7 @@
 }
 
 .hero h1 span {
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -227,7 +227,7 @@
   align-items: center;
   gap: 8px;
   padding: 14px 30px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   color: white;
   border-radius: 12px;
   font-size: 1rem;
@@ -483,7 +483,7 @@
 }
 
 .section-header h2 span {
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -882,7 +882,7 @@
   position: absolute;
   bottom: -20px;
   right: -20px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   color: white;
   padding: 16px 24px;
   border-radius: 16px;
@@ -913,7 +913,7 @@
 }
 
 .about-content h2 span {
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -989,7 +989,7 @@
 }
 
 .contact-info h2 span {
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1095,7 +1095,7 @@
 .form-submit {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   color: white;
   border-radius: 12px;
   font-size: 0.95rem;
@@ -1184,7 +1184,7 @@
 .modal-logo-icon {
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -1256,7 +1256,7 @@
 .modal-submit {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  background: var(--brand-gradient);
   color: white;
   border-radius: 12px;
   font-size: 0.95rem;

@@ -2,6 +2,11 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DEBUG: bool = False
+
+    # Public URLs — set these when frontend/backend are on different hosts
+    FRONTEND_URL: str = "http://localhost:5173"
+    BACKEND_URL: str = "http://localhost:8000"
+    CORS_ORIGINS: str = "*"  # comma-separated origins, or * for all
     
     DATABASE_URL: str
     SECRET_KEY: str
@@ -13,6 +18,9 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str
     SMTP_PASSWORD: str
+
+    GROQ_API_KEY: str = ""
+    MODEL_NAME: str = "llama-3.3-70b-versatile"
 
     class Config:
         env_file = ".env"

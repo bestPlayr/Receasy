@@ -5,6 +5,7 @@
 }
 
 :root {
+  /* Brand scale — blue & white */
   --blue-50: #f0f9ff;
   --blue-100: #e0f2fe;
   --blue-200: #bae6fd;
@@ -26,6 +27,10 @@
   --gray-700: #334155;
   --gray-800: #1e293b;
   --gray-900: #0f172a;
+
+  /* Brand gradient used across buttons / accents */
+  --brand-gradient: linear-gradient(135deg, #0ea5e9, #0369a1);
+
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.6;
@@ -34,6 +39,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -62,4 +68,52 @@ img {
 h1, h2, h3, h4, h5, h6 {
   line-height: 1.2;
   font-weight: 700;
+}
+
+/* ── Text selection ─────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(14, 165, 233, 0.25);
+  color: inherit;
+}
+
+/* ── Scrollbars (WebKit) ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 99px;
+  border: 2.5px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+  border: 2.5px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-300) transparent;
+}
+
+/* ── Accessible focus ring ──────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2.5px solid var(--blue-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
 }

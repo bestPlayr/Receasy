@@ -41,7 +41,7 @@ class ContactCreate(BaseModel):
 class CandidateCreate(BaseModel):
     full_name: str
     email: EmailStr
-    phone: str
+    phone: str 
     education_level: str
     university: Optional[str]
     years_of_experience: int
@@ -54,10 +54,12 @@ class CandidateCreate(BaseModel):
 class CandidateOut(CandidateCreate):
     id: int
     job_id: int
-    ai_score: Optional[int]
+    ai_score: Optional[float]
+    ai_score_data: Optional[dict] = None
     interview_status: Optional[str]
     interview_given: bool
     interview_score: Optional[int]
+    interview_feedback: Optional[str] = None
     applied_at: datetime
     class Config:
         from_attributes = True
@@ -97,6 +99,8 @@ class JobOut(BaseModel):
     candidates: List[CandidateOut] = []
     applicationDeadline: Optional[datetime] = Field(None, alias="application_deadline")
     interviewDeadlineDays: int = Field(7, alias="interview_deadline_days")
+    applicationFormUrl: Optional[str] = Field(None, alias="application_form_url")
+    linkedinWarning: Optional[str] = None
     class Config:
         from_attributes = True
         populate_by_name = True
@@ -108,11 +112,14 @@ class JobPublicOut(BaseModel):
     requiredSkills: List[str] = Field(alias="required_skills")
     customQuestions: Optional[List[str]] = Field(default=[], alias="custom_questions")
     minYearsExperience: int = Field(alias="min_years_experience")
+    salaryMin: int = Field(alias="salary_min")
+    salaryMax: int = Field(alias="salary_max")
     workType: str = Field(alias="work_type")
     location: str
     status: str
     postedAt: datetime = Field(alias="posted_at")
-    
+    applicationDeadline: Optional[datetime] = Field(None, alias="application_deadline")
+
     class Config:
         from_attributes = True
         populate_by_name = True
@@ -137,3 +144,23 @@ class LinkedInTokenStatus(BaseModel):
 # --- Interview Schemas ---
 class InterviewScorePayload(BaseModel):
     score: int
+
+class InterviewInfoOut(BaseModel):
+    candidateName: str
+    positionName: str
+    companyName: Optional[str] = None
+    totalQuestions: int = 10
+    expiresAt: Optional[datetime] = None
+
+class InterviewQuestionsOut(BaseModel):
+    questions: List[str]
+
+class InterviewAnswer(BaseModel):
+    question: str
+    answer: str
+
+class InterviewSubmitPayload(BaseModel):
+    answers: List[InterviewAnswer]
+
+class InterviewResultOut(BaseModel):
+    status: str
