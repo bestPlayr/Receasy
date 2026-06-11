@@ -1,0 +1,8 @@
+backend
+node_modules
+dist
+uploads
+*.pyc
+__pycache__
+venv
+.git
