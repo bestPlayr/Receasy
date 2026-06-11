@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
+import uuid
 
 class User(Base):
     __tablename__ = "users"
@@ -29,6 +30,8 @@ class ContactMessage(Base):
 class Job(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    application_form_url = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     position_name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
@@ -44,6 +47,8 @@ class Job(Base):
     ai_scoring_done = Column(Boolean, default=False)
     invites_sent = Column(Boolean, default=False)
     posted_at = Column(DateTime(timezone=True), server_default=func.now())
+    application_deadline = Column(DateTime(timezone=True), server_default=text("NOW() + INTERVAL '7 days'"), nullable=True)
+    interview_deadline_days = Column(Integer, default=7)
     owner = relationship("User", back_populates="jobs")
     candidates = relationship("Candidate", back_populates="job", cascade="all, delete-orphan")
 
@@ -64,6 +69,8 @@ class Candidate(Base):
     resume_link = Column(String, nullable=False)
     ai_score = Column(Integer, nullable=True)
     interview_status = Column(String, nullable=True)
+    interview_token = Column(String, nullable=True, unique=True, index=True)
+    interview_token_expires_at = Column(DateTime(timezone=True), nullable=True)
     interview_given = Column(Boolean, default=False)
     interview_score = Column(Integer, nullable=True)
     applied_at = Column(DateTime(timezone=True), server_default=func.now())

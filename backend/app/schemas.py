@@ -75,6 +75,8 @@ class JobCreate(BaseModel):
     workType: str
     location: str
     platforms: List[str]
+    applicationDeadline: Optional[datetime] = None
+    interviewDeadlineDays: int = 7
 
 class JobOut(BaseModel):
     id: int
@@ -93,6 +95,8 @@ class JobOut(BaseModel):
     invitesSent: bool = Field(alias="invites_sent")
     postedAt: datetime = Field(alias="posted_at")
     candidates: List[CandidateOut] = []
+    applicationDeadline: Optional[datetime] = Field(None, alias="application_deadline")
+    interviewDeadlineDays: int = Field(7, alias="interview_deadline_days")
     class Config:
         from_attributes = True
         populate_by_name = True
@@ -129,3 +133,7 @@ class LinkedInTokenUpdate(BaseModel):
 
 class LinkedInTokenStatus(BaseModel):
     configured: bool
+
+# --- Interview Schemas ---
+class InterviewScorePayload(BaseModel):
+    score: int

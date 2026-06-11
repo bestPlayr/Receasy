@@ -86,10 +86,19 @@ export const api = {
   },
   
   // Get job details for candidates (Public - No Auth Required)
-  getPublicJob: async (jobId) => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/public`, {
+  getPublicJob: async (publicId) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${publicId}/public`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
+    });
+    return handleResponse(response);
+  },
+
+  // Apply to a job using Form-Data (External facing, no Auth required)
+  applyToJob: async (publicId, formData) => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${publicId}/apply`, {
+      method: 'POST',
+      body: formData,
     });
     return handleResponse(response);
   },
@@ -99,16 +108,6 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/close`, {
       method: 'PATCH',
       headers: getHeaders(),
-    });
-    return handleResponse(response);
-  },
-
-  // Apply to a job (External facing, no Auth required)
-  applyToJob: async (jobId, candidateData) => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/apply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(candidateData),
     });
     return handleResponse(response);
   },

@@ -11,6 +11,7 @@ import Contact from './components/Contact';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import Dashboard from './components/dashboard/Dashboard';
+import TestApply from './components/TestApply';
 import { api } from './api';
 
 function Toast({ message, onDone }) {
@@ -28,6 +29,14 @@ function Toast({ message, onDone }) {
 }
 
 function App() {
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith('/apply/')) {
+    const publicId = currentPath.split('/')[2];
+    if (publicId) {
+      return <TestApply publicId={publicId} />;
+    }
+  }
+
   const [authMode, setAuthMode] = useState(null);
   const [toast, setToast] = useState(null);
   // Persist login across page refreshes
