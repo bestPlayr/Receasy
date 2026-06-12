@@ -44,8 +44,7 @@ app.include_router(interview_router.router)
 def log_config():
     print(f"[RecEasy] FRONTEND_URL = {settings.FRONTEND_URL}")
     print(f"[RecEasy] BACKEND_URL  = {settings.BACKEND_URL}")
-    if "localhost" in settings.FRONTEND_URL:
-        print("[RecEasy] WARNING: FRONTEND_URL is still localhost — update backend/.env and restart!")
+    print(f"[RecEasy] apply links will use: {settings.FRONTEND_URL}/apply/{{id}}")
 
 
 @app.get("/")

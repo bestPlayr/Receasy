@@ -1,14 +1,32 @@
+import os
+import re
+from pathlib import Path
 from urllib.parse import urlparse
 
 from app.config import settings
 
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+
+
+def _read_env_value(key: str, fallback: str) -> str:
+    """Read a value directly from backend/.env so URLs stay correct without server restart."""
+    if _ENV_PATH.exists():
+        for line in _ENV_PATH.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            match = re.match(rf"^{re.escape(key)}\s*=\s*(.+)$", line)
+            if match:
+                return match.group(1).strip().strip('"').strip("'")
+    return os.getenv(key, fallback)
+
 
 def frontend_base() -> str:
-    return settings.FRONTEND_URL.rstrip("/")
+    return _read_env_value("FRONTEND_URL", settings.FRONTEND_URL).rstrip("/")
 
 
 def backend_base() -> str:
-    return settings.BACKEND_URL.rstrip("/")
+    return _read_env_value("BACKEND_URL", settings.BACKEND_URL).rstrip("/")
 
 
 def apply_form_url(public_id: str) -> str:

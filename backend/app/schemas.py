@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, computed_field, model_validator
 from datetime import datetime
 
 from app.urls import apply_form_url, resume_public_url
@@ -115,20 +115,12 @@ class JobOut(BaseModel):
     candidates: List[CandidateOut] = []
     applicationDeadline: Optional[datetime] = Field(None, alias="application_deadline")
     interviewDeadlineDays: int = Field(7, alias="interview_deadline_days")
-    applicationFormUrl: Optional[str] = Field(None, alias="application_form_url")
     linkedinWarning: Optional[str] = None
 
-    @model_validator(mode='before')
-    @classmethod
-    def normalize_apply_url(cls, data):
-        public_id = data.public_id if hasattr(data, 'public_id') else data.get('public_id')
-        if public_id:
-            url = apply_form_url(public_id)
-            if hasattr(data, 'application_form_url'):
-                data.application_form_url = url
-            elif isinstance(data, dict):
-                data['application_form_url'] = url
-        return data
+    @computed_field
+    @property
+    def applicationFormUrl(self) -> str:
+        return apply_form_url(self.publicId)
 
     class Config:
         from_attributes = True

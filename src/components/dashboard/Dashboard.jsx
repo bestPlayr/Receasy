@@ -11,6 +11,8 @@ import {
 
 import { api } from '../../api';
 
+const FRONTEND_BASE = (import.meta.env.VITE_FRONTEND_URL || 'https://receasy.vercel.app').replace(/\/$/, '');
+
 function GithubIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -1571,12 +1573,9 @@ export default function Dashboard({ user, onLogout }) {
         workType: job.work_type || job.workType,
         aiScoringDone: job.ai_scoring_done ?? job.aiScoringDone,
         invitesSent: job.invites_sent ?? job.invitesSent,
-        applicationFormUrl: (() => {
-          const publicId = job.public_id || job.publicId;
-          if (!publicId) return job.application_form_url || job.applicationFormUrl || null;
-          const base = (import.meta.env.VITE_FRONTEND_URL || window.location.origin).replace(/\/$/, '');
-          return `${base}/apply/${publicId}`;
-        })(),
+        applicationFormUrl: (job.public_id || job.publicId)
+          ? `${FRONTEND_BASE}/apply/${job.public_id || job.publicId}`
+          : null,
         applicationDeadline: job.application_deadline || job.applicationDeadline || null,
         postedAt: new Date(job.posted_at || job.postedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         candidates: (job.candidates || []).map(c => ({
