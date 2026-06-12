@@ -1,6 +1,8 @@
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from datetime import datetime
+
+from app.urls import apply_form_url, resume_public_url
 
 # --- Auth Schemas ---
 class UserCreate(BaseModel):
@@ -61,6 +63,19 @@ class CandidateOut(CandidateCreate):
     interview_score: Optional[int]
     interview_feedback: Optional[str] = None
     applied_at: datetime
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_resume_link(cls, data):
+        resume = data.resume_link if hasattr(data, 'resume_link') else data.get('resume_link')
+        if resume:
+            normalized = resume_public_url(resume)
+            if hasattr(data, 'resume_link'):
+                data.resume_link = normalized
+            elif isinstance(data, dict):
+                data['resume_link'] = normalized
+        return data
+
     class Config:
         from_attributes = True
 
@@ -82,6 +97,7 @@ class JobCreate(BaseModel):
 
 class JobOut(BaseModel):
     id: int
+    publicId: str = Field(alias="public_id")
     positionName: str = Field(alias="position_name")
     description: str
     requiredSkills: List[str] = Field(alias="required_skills")
@@ -101,6 +117,19 @@ class JobOut(BaseModel):
     interviewDeadlineDays: int = Field(7, alias="interview_deadline_days")
     applicationFormUrl: Optional[str] = Field(None, alias="application_form_url")
     linkedinWarning: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_apply_url(cls, data):
+        public_id = data.public_id if hasattr(data, 'public_id') else data.get('public_id')
+        if public_id:
+            url = apply_form_url(public_id)
+            if hasattr(data, 'application_form_url'):
+                data.application_form_url = url
+            elif isinstance(data, dict):
+                data['application_form_url'] = url
+        return data
+
     class Config:
         from_attributes = True
         populate_by_name = True

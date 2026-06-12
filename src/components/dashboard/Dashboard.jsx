@@ -1571,7 +1571,12 @@ export default function Dashboard({ user, onLogout }) {
         workType: job.work_type || job.workType,
         aiScoringDone: job.ai_scoring_done ?? job.aiScoringDone,
         invitesSent: job.invites_sent ?? job.invitesSent,
-        applicationFormUrl: job.application_form_url || job.applicationFormUrl || null,
+        applicationFormUrl: (() => {
+          const publicId = job.public_id || job.publicId;
+          if (!publicId) return job.application_form_url || job.applicationFormUrl || null;
+          const base = (import.meta.env.VITE_FRONTEND_URL || window.location.origin).replace(/\/$/, '');
+          return `${base}/apply/${publicId}`;
+        })(),
         applicationDeadline: job.application_deadline || job.applicationDeadline || null,
         postedAt: new Date(job.posted_at || job.postedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         candidates: (job.candidates || []).map(c => ({

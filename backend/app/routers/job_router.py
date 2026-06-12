@@ -3,7 +3,6 @@ import uuid
 import shutil
 import smtplib
 import secrets
-from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -15,16 +14,13 @@ from app import models, schemas
 from app.dependencies import get_db, get_current_user_id
 from app.config import settings
 from app.score_resume import ResumeRanker
+from app.urls import apply_form_url, interview_url, resume_public_url, stored_path, sync_job_urls
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
 EDU_ORDER = ["High School", "Bachelor's", "Master's", "PhD"]
 
 
-def _resume_link_to_path(resume_link: str) -> str:
-    if resume_link.startswith("http"):
-        return urlparse(resume_link).path.lstrip("/")
-    return resume_link
 EXP_MINS = [0, 1, 3, 5, 7, 10]
 INTERVIEW_PASS_THRESHOLD = 70
 
@@ -138,8 +134,13 @@ def post_to_linkedin(text: str, token: str) -> tuple:
 def get_jobs(bg_tasks: BackgroundTasks, db: Session = Depends(get_db), user_id: int = Depends(get_current_user_id)):
     print(user_id)
     jobs = db.query(models.Job).filter(models.Job.user_id == user_id).order_by(models.Job.id.desc()).all()
+    urls_changed = False
     for job in jobs:
         check_auto_close(job, db, bg_tasks)
+        if sync_job_urls(job):
+            urls_changed = True
+    if urls_changed:
+        db.commit()
     return jobs
 
 @router.post("/create", response_model=schemas.JobOut)
@@ -154,7 +155,7 @@ def create_job(job_data: schemas.JobCreate, db: Session = Depends(get_db), user_
             )
 
     unique_public_id = str(uuid.uuid4())
-    apply_link = f"{settings.FRONTEND_URL.rstrip('/')}/apply/{unique_public_id}"
+    apply_link = apply_form_url(unique_public_id)
 
     print(f"Application form: {apply_link}")
 
@@ -271,7 +272,8 @@ def apply_to_job(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(resume.file, buffer)
     
-    resume_url = f"{settings.BACKEND_URL.rstrip('/')}/uploads/resumes/job_{job.id}/{unique_filename}"
+    resume_rel = f"uploads/resumes/job_{job.id}/{unique_filename}"
+    resume_url = resume_public_url(resume_rel)
 
     # Save Candidate to DB
     new_cand = models.Candidate(
@@ -324,7 +326,7 @@ def score_candidates(job_id: int, filters: schemas.FilterPayload, db: Session = 
             if filters.workTypeComfort != 'All' and c.comfortable_with_work_type != (filters.workTypeComfort == 'Yes'): continue
 
             # Convert stored URL to a local file path relative to the backend directory
-            resume_path = _resume_link_to_path(c.resume_link)
+            resume_path = stored_path(c.resume_link)
             try:
                 result = ranker.score(resume_path=resume_path, jd_text=job.description)
                 c.ai_score = float(result["final_score"])
@@ -385,7 +387,7 @@ def send_invites(job_id: int, payload: schemas.InvitePayload, bg_tasks: Backgrou
             c.interview_status = "invited"
             c.interview_token = secrets.token_urlsafe(32)
             c.interview_token_expires_at = datetime.now(timezone.utc) + timedelta(days=job.interview_deadline_days)
-            interview_link = f"{settings.FRONTEND_URL.rstrip('/')}/interview/{c.interview_token}"
+            interview_link = interview_url(c.interview_token)
             expires_date = c.interview_token_expires_at.strftime('%B %d, %Y')
             body = build_invite_email(c.full_name, job.position_name, interview_link, job.interview_deadline_days, expires_date)
             bg_tasks.add_task(send_email, c.email, f"Congratulations! Interview Invitation — {job.position_name}", body)
@@ -415,7 +417,7 @@ def invite_single_candidate(job_id: int, cand_id: int, bg_tasks: BackgroundTasks
     cand.interview_status = "invited"
     cand.interview_token = secrets.token_urlsafe(32)
     cand.interview_token_expires_at = datetime.now(timezone.utc) + timedelta(days=job.interview_deadline_days)
-    interview_link = f"{settings.FRONTEND_URL.rstrip('/')}/interview/{cand.interview_token}"
+    interview_link = interview_url(cand.interview_token)
     expires_date = cand.interview_token_expires_at.strftime('%B %d, %Y')
     body = build_invite_email(cand.full_name, job.position_name, interview_link, job.interview_deadline_days, expires_date)
     bg_tasks.add_task(send_email, cand.email, f"Congratulations! Interview Invitation — {job.position_name}", body)

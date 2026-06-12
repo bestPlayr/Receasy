@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 class Settings(BaseSettings):
     DEBUG: bool = False
@@ -23,6 +27,6 @@ class Settings(BaseSettings):
     MODEL_NAME: str = "llama-3.3-70b-versatile"
 
     class Config:
-        env_file = ".env"
+        env_file = _ENV_FILE
 
 settings = Settings()
