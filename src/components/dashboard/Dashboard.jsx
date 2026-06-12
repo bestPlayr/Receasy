@@ -1562,8 +1562,12 @@ export default function Dashboard({ user, onLogout }) {
     try {
       const data = await api.getJobs();
       // Map backend snake_case to frontend camelCase for rendering
-      const mappedJobs = data.map(job => ({
+      const mappedJobs = data.map(job => {
+        const publicId = job.public_id || job.publicId
+          || (job.application_form_url || job.applicationFormUrl || '').split('/apply/')[1]?.split('?')[0];
+        return {
         ...job,
+        publicId,
         positionName: job.position_name || job.positionName,
         requiredSkills: job.required_skills || job.requiredSkills || [],
         customQuestions: job.custom_questions || job.customQuestions || [],
@@ -1573,9 +1577,7 @@ export default function Dashboard({ user, onLogout }) {
         workType: job.work_type || job.workType,
         aiScoringDone: job.ai_scoring_done ?? job.aiScoringDone,
         invitesSent: job.invites_sent ?? job.invitesSent,
-        applicationFormUrl: (job.public_id || job.publicId)
-          ? `${FRONTEND_BASE}/apply/${job.public_id || job.publicId}`
-          : null,
+        applicationFormUrl: publicId ? `${FRONTEND_BASE}/apply/${publicId}` : null,
         applicationDeadline: job.application_deadline || job.applicationDeadline || null,
         postedAt: new Date(job.posted_at || job.postedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         candidates: (job.candidates || []).map(c => ({
@@ -1598,7 +1600,8 @@ export default function Dashboard({ user, onLogout }) {
           interviewFeedback: c.interview_feedback || null,
           appliedAt: new Date(c.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         }))
-      }));
+      };
+      });
       setJobs(mappedJobs);
     } catch (err) {
       showToast('Error loading jobs from server');
