@@ -40,6 +40,19 @@ app.include_router(job_router.router)
 app.include_router(settings_router.router)
 app.include_router(interview_router.router)
 
+@app.on_event("startup")
+def log_config():
+    print(f"[RecEasy] FRONTEND_URL = {settings.FRONTEND_URL}")
+    print(f"[RecEasy] BACKEND_URL  = {settings.BACKEND_URL}")
+    if "localhost" in settings.FRONTEND_URL:
+        print("[RecEasy] WARNING: FRONTEND_URL is still localhost — update backend/.env and restart!")
+
+
 @app.get("/")
 def health_check():
-    return {"status": "ok", "message": "RecEasy API is running"}
+    return {
+        "status": "ok",
+        "message": "RecEasy API is running",
+        "frontend_url": settings.FRONTEND_URL,
+        "backend_url": settings.BACKEND_URL,
+    }
